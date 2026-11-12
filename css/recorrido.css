@@ -1,0 +1,134 @@
+/* SOMA — arquitectura comercial. El hero y las ruinas conservan su identidad. */
+:root { --papel-soma:#ede6d6; --tinta-soma:#13251e; --borde-comercial:rgba(237,230,214,.18); }
+html { scroll-padding-top:100px; }
+section[id] { scroll-margin-top:90px; }
+h1.titulo_mamalon { margin:0; }
+.contacto-nav { margin-left:auto; margin-right:24px; padding:11px 17px; border:1px solid rgba(255,255,255,.6); border-radius:100px; color:#fff; font-size:12px; font-weight:600; letter-spacing:.02em; white-space:nowrap; }
+.contacto-nav span { padding-left:12px; }
+.contacto-nav:hover { background:#fff; color:#000; }
+a:focus-visible, button:focus-visible, summary:focus-visible, .tabla-desplazable:focus-visible { outline:3px solid #ff526e; outline-offset:6px; }
+.rutas-negocio { display:flex; flex-wrap:wrap; gap:10px; margin-top:28px; position:relative; z-index:6; }
+.rutas-negocio a { display:flex; align-items:center; gap:20px; padding:12px 16px; border:1px solid rgba(82,255,168,.3); border-radius:4px; font-size:12px; color:#c7efda; background:#08140e; }
+.rutas-negocio a:hover { border-color:#52ffa8; }
+.enlace-servicio { display:inline-block; margin-top:24px; padding-bottom:6px; border-bottom:1px solid currentColor; font-size:13px; font-weight:600; line-height:1.5; color:#ede6d6; }
+#servicios .enlace-servicio { color:#86e7b3; }
+#servicios .servicio { display:flex; flex-direction:column; }
+#servicios .servicio p { flex:1; opacity:.8; }
+.caso-resumen { display:grid; grid-template-columns:1fr 1.2fr 1.2fr; gap:28px; margin:24px 0; padding:24px 0; border-top:1px solid var(--borde-comercial); }
+.caso-resumen dt { color:#ff738e; font-size:10px; letter-spacing:.15em; text-transform:uppercase; margin-bottom:9px; font-weight:600; }
+.caso-resumen dd { margin:0; color:#b9b9c2; font-size:14px; line-height:1.65; }
+.contacto-temprano { background:var(--papel-soma); color:var(--tinta-soma); }
+.contacto-rejilla { display:grid; grid-template-columns:1.2fr 1fr; gap:clamp(36px,6vw,86px); align-items:start; }
+.contacto-temprano .titulo_seccion { font-size:clamp(2.4rem,4.6vw,4rem); }
+.contacto-temprano .titulo_seccion em { color:#285a46; }
+.contacto-temprano .cejita_seccion { opacity:1; color:#4a6156; }
+.contacto-temprano .cejita_seccion::before { background:currentColor; }
+.contacto-temprano .intro_seccion { opacity:1; color:#354d41; }
+.nota-alcance { margin-top:28px; max-width:49ch; padding-top:22px; border-top:1px solid #b8c0b2; font-size:13px; line-height:1.7; color:#4f5a50; }
+.consulta-proyecto { padding:28px; border:1px solid #b2bdad; background:rgba(255,255,255,.26); border-radius:6px; }
+.consulta-proyecto fieldset { border:0; padding:0; margin:0; min-width:0; }
+.consulta-proyecto legend { font:700 22px var(--fuente_display); margin-bottom:20px; }
+.opcion-interes { display:flex; gap:12px; align-items:center; border-bottom:1px solid #bdc5b8; padding:15px 0; cursor:pointer; font-size:14px; }
+.opcion-interes span { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; }
+.opcion-interes b { opacity:.3; font-size:18px; }
+.opcion-interes input { width:17px; height:17px; flex:0 0 17px; accent-color:#234e3c; cursor:pointer; }
+.opcion-interes input:checked + span { font-weight:600; color:#1e563d; }
+.opcion-interes input:checked + span b { opacity:1; }
+.opcion-interes:focus-within { outline:2px solid #285a46; outline-offset:4px; }
+.orientacion-proyecto { font-size:13px; line-height:1.6; margin:22px 0; min-height:4.8em; }
+.accion-comercial { display:flex; justify-content:space-between; gap:12px; align-items:center; min-height:52px; padding:14px 17px; border:1px solid #61616b; border-radius:4px; color:var(--papel-soma); font:600 13px/1.4 var(--fuente_body); transition:background .2s,border-color .2s; }
+.accion-comercial:hover { background:#212129; border-color:#eee; }
+.accion-comercial span { font-size:20px; }
+.accion-comercial--oscura { background:var(--tinta-soma); color:var(--papel-soma); border-color:var(--tinta-soma); }
+.accion-comercial--oscura:hover { background:#285a46; border-color:#285a46; }
+.nota-consulta { font-size:11px; line-height:1.6; margin-top:12px; color:#516054; }
+.contacto-telefono { display:inline-block; margin-top:20px; text-decoration:underline; text-underline-offset:4px; font-size:12px; }
+.cabecera-oferta { display:grid; grid-template-columns:1.3fr 1fr; gap:60px; align-items:end; }
+.cabecera-oferta .intro_seccion { margin:0; padding-bottom:6px; }
+.aviso-sector { margin:28px 0 58px; font-size:13px; line-height:1.8; color:#a7a7b4; }
+.aviso-sector a { color:var(--papel-soma); text-decoration:underline; text-underline-offset:4px; }
+.planes-rejilla { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; align-items:stretch; }
+.plan-comercial { position:relative; display:flex; flex-direction:column; padding:32px 24px 24px; background:#0d0e14; border:1px solid #343640; border-radius:6px; }
+.plan-enfoque { font-size:10px; letter-spacing:.13em; color:#b1b3c6; text-transform:uppercase; }
+.plan-comercial h3 { margin:24px 0 12px; font:700 clamp(28px,2.8vw,39px)/1.1 var(--fuente_display); letter-spacing:-.03em; }
+.plan-precio { font:600 clamp(19px,1.9vw,26px)/1.25 var(--fuente_display); color:var(--papel-soma); }
+.plan-precio span { display:block; font:500 10px var(--fuente_body); color:#a1a3b4; letter-spacing:.14em; margin-top:8px; }
+.plan-perfil { margin-top:24px; font-size:14px; line-height:1.65; color:#d1d0dc; min-height:7em; }
+.plan-incluye { list-style:none; padding:24px 0; margin:24px 0 0; border-top:1px solid var(--borde-comercial); }
+.plan-incluye li { position:relative; padding:0 0 14px 19px; font-size:13px; line-height:1.65; color:#c0c1cd; }
+.plan-incluye li::before { content:'↳'; color:#a6b5ff; position:absolute; left:0; }
+.plan-decision { margin-top:auto; padding-top:16px; padding-bottom:24px; font-size:13px; line-height:1.6; color:#bcbecc; }
+.plan-decision strong { display:block; color:var(--papel-soma); margin-bottom:6px; }
+.plan-comercial--premium { background:linear-gradient(145deg,#1b2851,#10172d); border-color:#7e99ff; box-shadow:0 0 0 1px #7e99ff; }
+.recomendacion-plan { position:absolute; left:-1px; right:-1px; bottom:100%; padding:10px 12px; text-align:center; border-radius:6px 6px 0 0; background:#b8c7ff; color:#101a35; font-size:10px; font-weight:700; letter-spacing:.02em; }
+.plan-comercial--premium h3 { color:#ccd6ff; }
+.accion-comercial--premium { background:#c2cfff; color:#111a32; border-color:#c2cfff; }
+.accion-comercial--premium:hover { background:#e4eaff; border-color:#e4eaff; }
+.condiciones-precio { color:#a5a7b3; font-size:12px; line-height:1.8; margin-top:24px; max-width:100ch; }
+.criterio-premium { display:grid; grid-template-columns:1fr 2.4fr; gap:40px; margin-top:44px; padding:32px; border:1px solid #333d5e; border-radius:4px; }
+.nota-editorial { color:#b8c7ff; font:italic 500 clamp(24px,2.5vw,34px)/1.2 var(--fuente_serif); }
+.criterio-premium h3 { font:600 20px var(--fuente_display); margin-bottom:12px; }
+.criterio-premium p { font-size:14px; color:#b5b8c8; line-height:1.8; max-width:70ch; }
+.detalle-comercial { border-bottom:1px solid var(--borde-comercial); }
+.detalle-comercial summary { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:24px 0; font-size:15px; font-weight:500; line-height:1.5; cursor:pointer; list-style:none; }
+.detalle-comercial summary::-webkit-details-marker { display:none; }
+.detalle-comercial summary > span:last-child { flex-shrink:0; font-size:22px; color:#b8c7ff; }
+.detalle-comercial[open] summary > span:last-child { transform:rotate(45deg); }
+.detalle-comercial p { padding-bottom:24px; color:#b6b8c4; font-size:14px; line-height:1.8; }
+#comparacion-paquetes { margin-top:20px; }
+.tabla-desplazable { overflow-x:auto; }
+.tabla-planes { width:100%; min-width:650px; border-collapse:collapse; text-align:left; font-size:13px; line-height:1.7; }
+.tabla-planes caption { text-align:left; padding:12px 0 20px; color:#a1a3b4; }
+.tabla-planes th, .tabla-planes td { padding:18px; border:1px solid #292d3b; vertical-align:top; }
+.tabla-planes th { font-weight:600; }
+.tabla-planes td { color:#b6b8c4; }
+.tabla-planes tr > :nth-child(3) { background:#141f38; color:#d5deff; }
+.detalle-nota { margin-top:20px; }
+.dudas-rejilla { display:grid; grid-template-columns:1fr 1.2fr; gap:65px; align-items:start; }
+.dudas-rejilla .titulo_seccion { font-size:clamp(2.3rem,4.3vw,3.8rem); }
+.lista-dudas { border-top:1px solid var(--borde-comercial); }
+.complementos-qr { padding-top:44px; padding-bottom:44px; background:#0d1011; }
+.catalogo-qr { border:none; }
+.catalogo-qr summary > span:first-child { font:700 clamp(25px,3vw,38px)/1.25 var(--fuente_display); }
+.catalogo-qr summary em { font-family:var(--fuente_serif); color:#a8c9ae; }
+.catalogo-qr summary small { display:block; font:400 12px/1.6 var(--fuente_body); color:#aab3ab; margin-top:12px; }
+.qr-rejilla { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; padding:20px 0; }
+.qr-rejilla article { border-top:1px solid #48594d; padding-top:22px; }
+.qr-precio { font:500 28px var(--fuente_display); color:#a8c9ae; }
+.qr-precio small { font:400 11px var(--fuente_body); }
+.qr-rejilla h3 { margin:18px 0 10px; font:600 19px var(--fuente_display); }
+.cierre-comercial .titulo_contacto { font-size:clamp(2.7rem,6.5vw,5.8rem); }
+.cierre-comercial .intro_seccion { max-width:60ch; }
+@media(max-width:950px) {
+  .contacto-rejilla { grid-template-columns:1fr 1fr; gap:30px; }
+  .planes-rejilla { gap:10px; }
+  .plan-comercial { padding:28px 16px 18px; }
+  .plan-perfil { min-height:9em; }
+  .recomendacion-plan { font-size:9px; }
+  .cabecera-oferta { gap:25px; }
+  .dudas-rejilla { gap:30px; }
+}
+@media(max-width:760px) {
+  .contacto-nav { padding:10px 13px; margin-right:16px; font-size:11px; }
+  .contacto-nav span { padding-left:5px; }
+  .rutas-negocio { gap:8px; }
+  .rutas-negocio a { font-size:11px; padding:11px; }
+  .caso-resumen { grid-template-columns:1fr; gap:20px; }
+  .contacto-rejilla, .cabecera-oferta, .dudas-rejilla { grid-template-columns:1fr; gap:32px; }
+  .consulta-proyecto { padding:22px; }
+  .cabecera-oferta .intro_seccion { margin-top:0; }
+  .aviso-sector { margin-bottom:28px; }
+  .planes-rejilla { grid-template-columns:1fr; gap:24px; }
+  .plan-comercial { padding:28px 24px; }
+  .plan-comercial--premium { margin-top:30px; }
+  .recomendacion-plan { font-size:11px; }
+  .plan-perfil { min-height:0; }
+  .plan-precio { font-size:27px; }
+  .plan-comercial h3 { font-size:38px; margin-top:20px; }
+  .plan-incluye { padding-bottom:8px; }
+  .criterio-premium { grid-template-columns:1fr; gap:20px; padding:24px; }
+  .nota-editorial br { display:none; }
+  .qr-rejilla { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .detalle-comercial summary { font-size:14px; }
+}
+@media(prefers-reduced-motion:reduce) { .accion-comercial { transition:none; } }

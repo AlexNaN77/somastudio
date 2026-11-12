@@ -1,0 +1,4 @@
+/* Respaldo exclusivo de arranque; conserva el diseño del hero. */
+body.inicio-respaldo #capa_intro,body.inicio-respaldo #linea_intro,body.inicio-respaldo #txtCargando{display:none!important}
+body.inicio-respaldo #contenidoHero,body.inicio-respaldo #navPrincipal,body.inicio-respaldo #indicadorScroll,body.inicio-respaldo .barrita_roja{opacity:1!important;visibility:visible!important}
+body.inicio-respaldo #navPrincipal,body.inicio-respaldo #indicadorScroll{transform:none!important}

@@ -1,0 +1,3188 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOMA — Webs y sistemas a la medida de tu negocio</title>
+<meta name="description" content="Webs, catálogos y sistemas a la medida. Explora proyectos de SOMA, compara opciones para restaurantes o cuéntanos qué necesita tu negocio.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- fuentes SOLO del pull-quote del hero: fraunces italica 650 + pirata one -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,650&family=Pirata+One&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<!-- preload de los frames del line boil: los frames 2-5 solo aparecen
+     via keyframes de background-image y sin esto el navegador los
+     pediria RECIEN al primer ciclo → flicker de tinta invisible.
+     (los frame 1 no van: el css base ya los pide de inmediato) -->
+<link rel="preload" as="image" href="trazo-marcador-largo-2.png">
+<link rel="preload" as="image" href="trazo-marcador-largo-3.png">
+<link rel="preload" as="image" href="trazo-marcador-largo-4.png">
+<link rel="preload" as="image" href="trazo-marcador-largo-5.png">
+<link rel="preload" as="image" href="trazo-marcador-corto-2.png">
+<link rel="preload" as="image" href="trazo-marcador-corto-3.png">
+<link rel="preload" as="image" href="trazo-marcador-corto-4.png">
+<link rel="preload" as="image" href="trazo-marcador-corto-5.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<!-- WebGL del hero anterior retirado: el nuevo hero usa capas y filtros SVG. -->
+
+<style>
+/*
+  ╔═══════════════════════════════════════════════════╗
+  ║                                                   ║
+  ║   ░██████╗░█████╗░███╗░░░███╗░█████╗░            ║
+  ║   ██╔════╝██╔══██╗████╗░████║██╔══██╗            ║
+  ║   ╚█████╗░██║░░██║██╔████╔██║███████║            ║
+  ║   ░╚═══██╗██║░░██║██║╚██╔╝██║██╔══██║            ║
+  ║   ██████╔╝╚█████╔╝██║░╚═╝░██║██║░░██║            ║
+  ║   ╚═════╝░░╚════╝░╚═╝░░░░░╚═╝╚═╝░░╚═╝            ║
+  ║                                                   ║
+  ║   estilos principales                            ║
+  ║   si se rompe algo no me culpen                  ║
+  ║   yo solo queria que se viera chido :v           ║
+  ║                                                   ║
+  ╚═══════════════════════════════════════════════════╝
+*/
+
+:root{
+  --vacio:#050507;
+  --azulito:#2D5BFF;
+  --azul_brilloso:#5B82FF;
+  --blanco:#FFFFFF;
+  --rojito:#FF3366;
+  --moradito:#8B5CF6;
+  --suavecito:cubic-bezier(.22,1,.36,1);
+  --suavecito_out:cubic-bezier(0.16, 1, 0.3, 1);
+  --fuente_display:'Bricolage Grotesque',sans-serif;
+  --fuente_serif:'Fraunces',serif;
+  --fuente_body:'Inter',sans-serif;
+
+  /* escala tipografica unica (formula del /ref de intensity):
+     UNA sola formula fluida y las demas lineas en proporcion FIJA.
+     asi el titulo guarda siempre la misma relacion en cualquier pantalla
+     y se acabo el 'en esta pantalla se ve raro' */
+  --fs_t1:clamp(2.7rem,13vw,9.8rem);
+  --fs_t2:calc(var(--fs_t1)*.78);
+  --fs_real:calc(var(--fs_t1)*1.06);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;scroll-behavior:smooth}
+body{
+  background:var(--vacio);
+  color:var(--blanco);
+  font-family:var(--fuente_body);
+  overflow-x:hidden;
+  min-height:100vh;
+  cursor:auto;
+}
+
+a{color:inherit;text-decoration:none}
+::selection{background:var(--azulito);color:#fff}
+
+
+/* ─────────── lienzo webgl ─────────── */
+
+#lienzo_webgl {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  /* EL DIALOGO BLOB↔TEXTO: el canvas se pinta ENCIMA de la linea
+     "real." (z12) pero DEBAJO del resto del texto (z34), en SCREEN:
+     donde el blob cruza la palabra la ILUMINA y la tiñe (rojo →
+     rosas/violetas/blanco). difference daba complementos feos
+     (amarillo-verde); screen solo suma luz = siempre bonito.
+     sobre el fondo casi negro screen ≈ normal, el blob no cambia */
+  z-index: 26;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  /* el canvas renderiza a resolucion interna baja (ps1) y aqui se estira:
+     pixelated mantiene el pixel crujiente en vez de difuminarlo */
+  image-rendering: pixelated;
+}
+
+
+/* ─────────── intro / carga ─────────── */
+
+#capa_intro {
+  position: fixed; inset: 0;
+  background: var(--vacio);
+  z-index: 50; pointer-events: none;
+}
+#linea_intro {
+  position: fixed;
+  top: 50%; left: 50%;
+  width: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--azulito), var(--azul_brilloso), var(--azulito), transparent);
+  transform: translate(-50%, -50%);
+  z-index: 51; pointer-events: none;
+  border-radius: 2px;
+   box-shadow: 0 0 30px var(--azulito), 0 0 60px rgba(45,91,255,0.3);
+}
+
+/* grano textura - le da ese look cinematico */
+.grano_textura{
+  position:fixed;inset:0;z-index:90;pointer-events:none;
+  opacity:.03;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:mover_grano 8s steps(6) infinite;
+}
+@keyframes mover_grano{
+  0%{transform:translate(0,0)} 20%{transform:translate(-3%,2%)}
+  40%{transform:translate(2%,-3%)} 60%{transform:translate(-2%,1%)}
+  80%{transform:translate(1%,2%)} 100%{transform:translate(0,0)}
+}
+
+/* la viñeta oscura de los bordes — vive DENTRO del hero, scrollea con él */
+.vineta{
+  position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse 80% 70% at 50% 45%, transparent 35%, rgba(5,5,7,.85) 100%);
+}
+
+/* orbitas esas bolas de luz que flotan atras — tambien dentro del hero */
+.orbita_xd{
+  position:absolute;border-radius:50%;pointer-events:none;
+  filter:blur(100px);z-index:0;
+  animation: flotar_orbita 14s ease-in-out infinite alternate;
+}
+.orbita_xd--1{
+  width:min(700px,80vw);height:min(700px,80vw);
+  background:radial-gradient(circle, rgba(45,91,255,0.15) 0%, transparent 70%);
+  top:-15%;left:-15%;
+}
+.orbita_xd--2{
+  width:min(500px,60vw);height:min(500px,60vw);
+  background:radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%);
+  bottom:-10%;right:-10%;
+  animation-delay:-5s;
+}
+.orbita_xd--3{
+  width:min(400px,50vw);height:min(400px,50vw);
+  background:radial-gradient(circle, rgba(255,51,102,0.06) 0%, transparent 70%);
+  top:35%;left:60%;
+   animation-delay:-9s;
+}
+@keyframes flotar_orbita{
+  0%{transform:translate(0,0) scale(1)}
+  100%{transform:translate(25px,-20px) scale(1.06)}
+}
+
+/* lineas decorativas esas que apenas se ven */
+.linea_decorativa{
+  position:absolute;pointer-events:none;z-index:3;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.05) 20%, rgba(45,91,255,0.1) 50%, rgba(255,255,255,0.05) 80%, transparent);
+}
+.linea_decorativa--1{ top:20%; left:0; width:100%; }
+.linea_decorativa--2{ bottom:24%; left:0; width:100%; opacity:0.6; }
+
+
+/*
+  ┌──────────────────────────────────┐
+  │  navegacion de arriba             │
+  └──────────────────────────────────┘
+*/
+
+.barra_nav{
+  position:fixed;top:0;left:0;width:100%;z-index:88;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:clamp(10px,1.6vw,18px) clamp(22px,4vw,64px);
+  mix-blend-mode:difference;
+  opacity:0; transform:translateY(-20px);
+}
+.logo_del_nav{
+  display:flex;align-items:center;gap:.55em;
+  font-family:var(--fuente_display);font-weight:800;
+  font-size:clamp(16px,1.5vw,19px);letter-spacing:-.01em;
+}
+.punto_del_logo{
+  width:.42em;height:.42em;border-radius:50%;
+  background:var(--azulito);
+  box-shadow:0 0 14px var(--azulito);
+  display:inline-block;transform:translateY(.04em);
+}
+/* MARCA (formula intensity 1:1): el png trae aire alrededor → se
+   renderiza grande y los MARGENES NEGATIVOS recortan el aire
+   (intensity usa height:132px; margin:-33px 0 -53px -18px).
+   el margen izquierdo negativo pega el lettering al borde y los
+   verticales lo centran con el boton hamburguesa (44px) */
+.logo_del_nav{height:44px;display:flex;align-items:center;overflow:visible}
+.img_logo_nav{
+  height:118px;width:auto;max-width:none;display:block;
+  margin:-37px 0 -37px -34px;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,.45));
+  transition:filter .4s var(--suavecito),transform .45s var(--suavecito_out);
+}
+@media (max-width:640px){
+  .img_logo_nav{height:96px;margin:-26px 0 -26px -27px}
+}
+.logo_del_nav:hover .img_logo_nav{
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,.45)) drop-shadow(0 0 18px rgba(255,255,255,.22));
+  transform:scale(1.02);
+}
+
+/* atmosfera del nav (formula intensity): gradiente oscuro enmascarado
+   hacia abajo + glow sutil tras el logo → el nav respira y se lee
+   sobre cualquier cosa que pase debajo */
+.atmosfera_nav{
+  position:fixed;top:0;left:0;right:0;height:124px;
+  z-index:80;pointer-events:none;
+  background:
+    radial-gradient(ellipse 62% 100% at 18% -30%, rgba(45,91,255,.10), transparent 68%),
+    linear-gradient(to bottom, rgba(5,5,7,.8) 0%, rgba(5,5,7,.5) 48%, rgba(5,5,7,.15) 78%, transparent 100%);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  mask-image:linear-gradient(to bottom,#000 0%,#000 45%,rgba(0,0,0,.76) 68%,transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 45%,rgba(0,0,0,.76) 68%,transparent 100%);
+  opacity:0;transition:opacity 1s var(--suavecito);
+}
+body.loaded .atmosfera_nav{opacity:1}
+
+/* ─── menu hamburguesa ─── */
+.boton_menu{
+  position:relative;z-index:89;
+  width:44px;height:44px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;
+  background:none;border:none;cursor:pointer;padding:0;
+}
+@media(pointer:coarse){.boton_menu{cursor:pointer}}
+.boton_menu span{display:block;width:26px;height:2px;background:var(--blanco);transition:transform .45s var(--suavecito)}
+.boton_menu.activo span:nth-child(1){transform:translateY(4.5px) rotate(45deg)}
+.boton_menu.activo span:nth-child(2){transform:translateY(-4.5px) rotate(-45deg)}
+
+/* overlay fullscreen del menu — tipografia grande editorial */
+.overlay_menu{
+  position:fixed;inset:0;z-index:85;
+  background:rgba(4,4,7,.96);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  display:flex;flex-direction:column;justify-content:center;
+  padding:0 clamp(28px,8vw,120px);
+  visibility:hidden;opacity:0;
+  transition:opacity .55s var(--suavecito), visibility 0s linear .55s;
+}
+.overlay_menu.abierto{visibility:visible;opacity:1;transition:opacity .55s var(--suavecito)}
+.enlace_overlay{
+  display:flex;align-items:baseline;gap:18px;
+  font-family:var(--fuente_display);font-weight:800;
+  font-size:clamp(1.9rem,6.2vw,4rem);letter-spacing:-.03em;line-height:1.18;
+  padding:.1em 0;
+  opacity:0;transform:translateY(26px);
+  transition:opacity .6s var(--suavecito),transform .6s var(--suavecito),color .3s;
+}
+.overlay_menu.abierto .enlace_overlay{opacity:1;transform:translateY(0)}
+.overlay_menu.abierto .enlace_overlay:nth-child(1){transition-delay:.08s}
+.overlay_menu.abierto .enlace_overlay:nth-child(2){transition-delay:.13s}
+.overlay_menu.abierto .enlace_overlay:nth-child(3){transition-delay:.18s}
+.overlay_menu.abierto .enlace_overlay:nth-child(4){transition-delay:.23s}
+.overlay_menu.abierto .enlace_overlay:nth-child(5){transition-delay:.28s}
+.overlay_menu.abierto .enlace_overlay:nth-child(6){transition-delay:.33s}
+.overlay_menu.abierto .enlace_overlay:nth-child(7){transition-delay:.38s}
+.enlace_overlay:hover{color:var(--rojito)}
+.enlace_overlay .indice_overlay{
+  font-family:var(--fuente_serif);font-style:italic;font-weight:500;
+  font-size:.35em;color:var(--azul_brilloso);opacity:.85;
+}
+.pie_overlay{
+  margin-top:clamp(30px,6vh,54px);
+  display:flex;gap:26px;flex-wrap:wrap;
+  font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.55;
+}
+.pie_overlay a{border-bottom:1px solid rgba(255,255,255,.25);padding-bottom:3px}
+.pie_overlay a:hover{border-color:var(--rojito)}
+
+
+/*
+  ┌──────────────────────────────────┐
+  │  heroxd - la seccion principal    │
+  │  la que se ve primero             │
+  └──────────────────────────────────┘
+*/
+
+.heroxd{
+  position:relative;
+  min-height:100vh;min-height:100svh;
+  display:grid;place-items:center;
+  /* padding-top compensa el nav fijo; el place-items:center ya NO
+     regala aire de mas porque el alto disponible se acota abajo */
+  padding:clamp(76px,10vh,108px) clamp(22px,5vw,64px) clamp(20px,4vh,44px);
+  overflow:hidden; /* el hero es UNA pieza: nada se sale, todo scrollea junto */
+}
+/* reticula de 90px enmascarada al centro (formula del /ref de intensity):
+   la estructura invisible que hace que el hero no se sienta "flotando" */
+.heroxd::before{
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:90px 90px;
+  mask-image:radial-gradient(ellipse at center,#000 25%,transparent 72%);
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 25%,transparent 72%);
+}
+.contenido_del_hero{
+  position:relative;
+  max-width:min(1180px,94vw);
+  width:100%;
+  opacity:0;
+   visibility:hidden;
+  /* pegar el bloque hacia el nav: centrado dentro del espacio
+     restante pero anclado arriba en pantallas altas */
+  align-self:start;
+}
+/* en pantallas bajas (laptops chaparras) el start podria encimar
+   con el indicador de scroll → regresamos al centrado */
+@media (min-height:1000px){
+  .contenido_del_hero{margin-top:clamp(20px,6vh,80px)}
+}
+.contenido_del_hero.ya_se_ve{
+  opacity:1;
+  visibility:visible;
+}
+/* OJO: sin z-index ni perspective — crear stacking context aqui
+   atraparia a las lineas y mataria el intercalado con el canvas */
+.capa_texto_hero{
+  position:relative;
+}
+
+/* eyebrow (formula intensity: 11px, tracking .34em, rayitas de acento
+   a AMBOS lados — en intensity son rojas, aca van en azul soma) */
+.cejita{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--fuente_body);
+  font-size:clamp(10px,1vw,11px);font-weight:600;
+  letter-spacing:.3em;text-transform:uppercase;
+  margin-bottom:clamp(22px,4.5vh,54px);
+  opacity:.75;
+  position:relative;z-index:34;
+  transform:translate(var(--prx,0px),var(--pry,0px));
+}
+/* placa de museo: el texto balanceado (a 2 lineas moviles pesan
+   parejo) y las rayitas como filete grabado que se FUNDE hacia
+   afuera en vez de cortarse en seco.
+   OJO el salto explicito solo-movil: con wrap automatico la CAJA
+   del span se quedaba al ancho disponible aunque las lineas fueran
+   cortas → la rayita derecha flotaba lejisimos del texto. con el
+   br la caja mide lo que mide la linea mas larga y las rayitas
+   ABRAZAN el texto */
+.cejita_texto{text-wrap:balance}
+.salto_cejita{display:none}
+.cejita::before,
+.cejita::after{
+  content:"";width:28px;height:1px;opacity:.7;
+}
+.cejita::before{background:linear-gradient(90deg,transparent,var(--azul_brilloso))}
+.cejita::after{background:linear-gradient(90deg,var(--azul_brilloso),transparent)}
+
+.titulo_mamalon{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:0;
+}
+
+/* filtro ps1 pa que se vea retro — POR LINEA, no en el contenedor:
+   el filter crea stacking context y aislaria el intercalado de z
+   que necesita el dialogo blob↔texto */
+.linea_titulo_1,
+.linea_titulo_2,
+.linea_titulo_3 {
+  filter: url(#ps1-distortion);
+}
+.linea_titulo_1,
+.linea_titulo_2 { z-index:34; }
+.linea_titulo_3 { z-index:12; } /* "real." queda DEBAJO del blob */
+
+.linea_titulo_1{
+  font-family:var(--fuente_display);
+  font-weight:800;
+  font-size:var(--fs_t1);
+  line-height:.88;
+  letter-spacing:-.045em;
+  transform:rotate(-1.5deg) translateX(-0.5vw) translate(var(--prx,0px),var(--pry,0px));
+  transform-origin:left center;
+  position:relative;
+   white-space:nowrap;
+}
+
+.linea_titulo_1::before{
+  content:"";
+  position:absolute;
+  left:-2%;top:15%;
+  width:104%;height:70%;
+  background:linear-gradient(90deg, rgba(45,91,255,0.06) 0%, rgba(139,92,246,0.03) 50%, transparent 100%);
+  border-left:3px solid rgba(45,91,255,0.3);
+  transform:skewX(-3deg);
+  z-index:-1;
+  pointer-events:none;
+}
+
+.linea_titulo_2{
+  font-family:var(--fuente_display);
+  font-weight:800;
+  font-size:var(--fs_t2);
+  line-height:.92;
+  letter-spacing:-.04em;
+  transform:rotate(0.5deg) translateX(2vw) translate(var(--prx,0px),var(--pry,0px));
+  transform-origin:left center;
+  margin-top:clamp(4px, 0.5vw, 10px);
+  position:relative;
+  color:rgba(255,255,255,0.92);
+}
+
+.linea_titulo_3{
+  display:inline-flex;
+  align-items:center;
+  gap:clamp(12px,1.5vw,28px);
+  transform:rotate(-0.8deg) translateX(clamp(30px,6vw,100px)) translate(var(--prx,0px),var(--pry,0px));
+  transform-origin:left center;
+  margin-top:clamp(2px, 0.4vw, 8px);
+  position:relative;
+}
+.barrita_roja{
+  width:clamp(30px,4vw,70px);
+  height:3px;
+  background:var(--rojito);
+  transform:skewX(-20deg);
+  box-shadow:0 0 15px rgba(255,51,102,0.5);
+  flex-shrink:0;
+  opacity:0;
+}
+.texto_real{
+  font-family:var(--fuente_serif);
+  font-weight:600;
+  font-style:italic;
+  font-size:var(--fs_real);
+  line-height:.85;
+  letter-spacing:-.02em;
+  /* rojo de marca de vuelta (combina con la barrita roja): con el
+     canvas en screen, el blob la ilumina hacia rosa/violeta/blanco
+     al cruzarla — se nota y nunca da colores sucios */
+  color:var(--rojito);
+  text-shadow:0 0 40px rgba(255,51,102,0.3);
+   position:relative;
+}
+.texto_real::after{
+  content:"real.";
+  position:absolute;
+  top:4px;left:6px;
+  font-size:inherit;
+  font-family:inherit;
+  font-style:inherit;
+  font-weight:inherit;
+  letter-spacing:inherit;
+  color:transparent;
+  -webkit-text-stroke:1px rgba(255,51,102,0.35);
+  z-index:-1;
+  pointer-events:none;
+}
+
+.subtitulo_hero{
+  margin:clamp(32px,6.5vh,68px) auto 0;
+  /* alineado con la sangria de la linea "real." → el offset se vuelve
+     composicion deliberada, no texto flotando a la izquierda */
+  margin-left:clamp(30px,6vw,100px);
+  max-width:42ch;
+  font-family:var(--fuente_body);
+  font-size:clamp(1.15rem,1.7vw,1.5rem);
+  line-height:1.6;font-weight:400;
+  letter-spacing:-.006em;
+  color:rgba(255,255,255,.92);
+  text-wrap:balance;
+  text-shadow:0 1px 18px rgba(0,0,0,.45);
+  position:relative;z-index:34;
+  transform:rotate(-0.3deg) translate(var(--prx,0px),var(--pry,0px));
+}
+
+
+.subtitulo_hero b{
+  font-family:var(--fuente_serif);
+  font-weight:600;font-style:italic;
+  font-size:1.18em;
+  color:var(--rojito);opacity:1;
+}
+
+/* botones de abajo */
+.fila_botones{
+  position:relative;z-index:25;
+  /* gap con un pelin mas de aire: los papeles rasgados sobresalen del
+     boton y con el gap original quedaban casi besándose */
+  display:flex;gap:clamp(24px,2.4vw,34px);
+  justify-content:flex-start;align-items:center;flex-wrap:wrap;
+  margin-top:clamp(36px,7vh,76px);
+  margin-left:clamp(30px,6vw,100px);
+  pointer-events:auto;
+  z-index:34;
+  transform:translate(var(--prx,0px),var(--pry,0px));
+}
+.botonxd{
+  position:relative;overflow:hidden;
+  font-family:var(--fuente_body);font-size:clamp(13px,1.1vw,14px);
+  font-weight:600;letter-spacing:.02em;
+  padding:clamp(14px,1.4vw,17px) clamp(26px,2.4vw,34px);
+  border-radius:100px;border:1px solid rgba(255,255,255,0.12);
+  display:inline-flex;align-items:center;gap:.6em;
+  transition:border-color .4s var(--suavecito), transform .4s var(--suavecito_out), box-shadow .4s var(--suavecito);
+  backdrop-filter:blur(12px);
+  background:rgba(255,255,255,0.04);
+}
+.botonxd span{position:relative;z-index:4}
+
+/* ====== BOTONES LIQUIDOS — shader-like (formula intensity, paleta soma)
+   se VE como fluido webgl pero es css+gsap: cero lag en gama baja ====== */
+@property --bx-angle{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+@property --bx-fill{ syntax:'<percentage>'; inherits:false; initial-value:0%; }
+
+/* CAPA 1 — liquid fill: plasma azul/morado que sube desde abajo */
+.botonxd::before{
+  content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;
+  background:
+    radial-gradient(120% 140% at 50% 120%, var(--azulito) 0%, #1e3fd4 55%, #0a1460 100%),
+    conic-gradient(from var(--bx-angle), var(--azulito), var(--moradito), var(--azul_brilloso), var(--rojito), var(--azulito));
+  background-blend-mode:overlay;
+  clip-path:inset(calc(100% - var(--bx-fill)) 0 0 0 round 100px);
+  transition:clip-path .5s var(--suavecito);
+  pointer-events:none;
+}
+.botonxd:hover{ --bx-fill:108%; }
+.botonxd:hover::before{ animation:plasma_soma 6s linear infinite; }
+@keyframes plasma_soma{ to{ --bx-angle:360deg; } }
+
+/* CAPA 2 — glow que sigue al cursor */
+.botonxd::after{
+  content:"";position:absolute;inset:-2px;z-index:2;border-radius:inherit;
+  background:radial-gradient(160px 160px at var(--bx-mx,50%) var(--bx-my,50%),
+            rgba(109,172,255,.55), transparent 60%);
+  opacity:0;transition:opacity .4s var(--suavecito);
+  pointer-events:none;mix-blend-mode:screen;
+}
+.botonxd:hover::after{opacity:1}
+
+/* CAPA 3 — grain sutil
+   OJO: .botonxd .grano_boton (0,2,0) para ganarle a .botonxd span (0,1,1),
+   si no el span se vuelve position:relative y entra al flujo */
+.botonxd .grano_boton{
+  position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;
+  opacity:.08;mix-blend-mode:overlay;transition:opacity .4s var(--suavecito);
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23b)'/%3E%3C/svg%3E");
+  background-size:120px 120px;
+}
+.botonxd:hover .grano_boton{opacity:.26}
+
+/* CAPA ripple — onda desde el click.
+   MISMO truco de especificidad: si .botonxd span le gana, el ripple
+   entra al flujo y el boton se EXPANDE al click (el bug de pc) */
+.botonxd .onda_boton{
+  position:absolute;z-index:3;border-radius:50%;
+  pointer-events:none;
+  background:radial-gradient(circle, rgba(255,255,255,.32), transparent 70%);
+  mix-blend-mode:overlay;transform:translate(-50%,-50%) scale(0);
+}
+/* en el boton principal el ripple es OSCURO: el flash blanco del
+   overlay se comia el texto blanco en :active (texto invisible) */
+.botonxd--principal .onda_boton{
+  background:radial-gradient(circle, rgba(8,16,50,.5), transparent 70%);
+  mix-blend-mode:multiply;
+}
+
+.botonxd:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(45,91,255,0.35)}
+.botonxd--principal{background:var(--blanco);border-color:transparent;color:#000}
+/* EL TEXTO SE AUTO-INVIERTE contra lo que tenga detras (difference):
+   fondo blanco → texto negro · plasma oscuro → texto claro · estados
+   intermedios → se resuelve solo. cero timings, imposible que
+   desaparezca en hover/active/transiciones */
+.botonxd--principal span:not(.grano_boton):not(.onda_boton){
+  color:#fff;mix-blend-mode:difference;
+}
+.botonxd--principal:hover{box-shadow:0 12px 40px rgba(45,91,255,0.4)}
+.botonxd--fantasma:hover{border-color:transparent;color:#fff}
+@media (prefers-reduced-motion:reduce){
+  .botonxd::before,.botonxd::after,.grano_boton{transition:none!important;animation:none!important}
+}
+.botonxd .flechita{transition:transform .45s var(--suavecito)}
+.botonxd:hover .flechita{transform:translateX(5px)}
+
+/*
+  ┌─────────────────────────────────────────────┐
+  │  ICONOS FLOTANTES DE LOS BOTONES             │
+  │  inspiracion persona 3/4 vibes               │
+  │  ahora con envoltura pa que no se corten xd  │
+  └─────────────────────────────────────────────┘
+*/
+
+/* La envoltura nos sirve de ancla para los iconos */
+.envoltura_botonxd {
+  position: relative;
+  display: inline-block;
+}
+
+.icono_flotante_xd {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none; /* Que los clics pasen a través del icono hacia el botón */
+  image-rendering: pixelated;
+  filter: drop-shadow(0px 8px 12px rgba(0, 0, 0, 0.4));
+  animation: flote_videojuego 2.5s ease-in-out infinite alternate;
+  transition: transform 0.3s var(--suavecito_out), filter 0.3s var(--suavecito);
+}
+
+.icono_exclamacion {
+  width: 44px;
+  top: -18px;
+  left: -2px;
+  animation-delay: 0s;
+}
+
+.icono_tv {
+  width: 48px;
+  top: -18px;
+  right: -15px; 
+  animation-delay: -1.2s;
+}
+
+@keyframes flote_videojuego {
+  0% { transform: translateY(0px) rotate(-3deg); }
+  100% { transform: translateY(-3px) rotate(4deg); }
+}
+
+
+.envoltura_botonxd:hover .icono_flotante_xd {
+  transform: translateY(-12px) scale(1.15) rotate(8deg);
+  animation-play-state: paused;
+  filter: drop-shadow(0px 12px 18px rgba(45, 91, 255, 0.6));
+}
+
+.envoltura_botonxd:active .icono_flotante_xd {
+  transform: translateY(2px) scale(0.85) rotate(-12deg);
+  transition: transform 0.1s ease;
+}
+
+/*
+  ┌──────────────────────────────────────────────────┐
+  │  STICKER SLOTS — recorte pegado con masking tape  │
+  │  capas: papel(z1) → burst(z2) → botón(z3) →      │
+  │  cinta(z4) · grain(z5 en la fila) · icono(z10,    │
+  │  FUERA del slot, REGLA CERO: no se le toca nada)  │
+  │  la fila ya vive en z34 > canvas z26 ➜ los slots  │
+  │  pintan ENCIMA del blob                           │
+  └──────────────────────────────────────────────────┘
+*/
+.sticker-slot{
+  position:relative;display:inline-block;
+  /* font-size:0 mata el gap de baseline del inline-block sin tocar
+     el botón (que trae su propio font-size explícito) */
+  font-size:0;
+}
+.sticker-slot--principal{transform:rotate(-2deg)}
+.sticker-slot--secundario{transform:rotate(1.5deg)}
+
+/* CAPA 1 — papel rasgado: 15-20% más grande que el botón, rotación
+   propia de ~1deg para que no se vea "alineado de fábrica";
+   en el segundo slot va espejeado pa disimular el clon */
+.papel-sticker{
+  position:absolute;left:50%;top:50%;z-index:1;
+  width:118%;height:172%;
+  transform:translate(-50%,-50%) rotate(1deg);
+  pointer-events:none;user-select:none;
+}
+.sticker-slot--secundario .papel-sticker{
+  transform:translate(-50%,-50%) rotate(1deg) scaleX(-1);
+}
+
+/* CAPA 2 — burst halftone DETRÁS del icono flotante (1.6x su tamaño),
+   centrado en la posición del icono, asomándose por los bordes */
+.burst-sticker{position:absolute;z-index:2;pointer-events:none;user-select:none}
+.burst-sticker--azul{width:70px;left:-15px;top:-31px}
+.burst-sticker--amarillo{width:77px;right:-29px;top:-33px}
+
+/* CAPA 3 — el botón real, HTML vivo, con sombra dura estilo sticker */
+.sticker-slot .botonxd{
+  z-index:3;
+  filter:drop-shadow(3px 3px 0 rgba(11,11,16,.55));
+}
+/* el fantasma trae fondo casi transparente: sin esto el papel crema
+   se volvería SU fondo (prohibido). oscuro opaco SOLO dentro del slot */
+.sticker-slot .botonxd--fantasma{background:rgba(9,9,15,.95)}
+
+/* CAPA 4 — cinta masking sobre la esquina del papel */
+.cinta-sticker{
+  position:absolute;z-index:4;width:92px;height:auto;
+  opacity:.92;pointer-events:none;user-select:none;
+}
+.cinta-sticker--izq{left:-44px;top:-30px;transform:rotate(-35deg)}
+.cinta-sticker--der{right:-44px;top:-30px;transform:rotate(30deg)}
+
+/* grain SOLO sobre el bloque de los slots (no todo el hero) */
+.grano_stickers{
+  position:absolute;inset:-34px;z-index:5;
+  opacity:.05;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='ns'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23ns)'/%3E%3C/svg%3E");
+  background-size:140px 140px;
+}
+
+/* entrada "pegar el sticker" — usa la propiedad translate (separada
+   de transform) pa no pelearse con la rotación del slot.
+   TODO dentro de no-preference: con reduced-motion se ven de una */
+@media (prefers-reduced-motion: no-preference){
+  .sticker-slot{
+    opacity:0;translate:0 12px;
+    transition:opacity .6s var(--suavecito),
+               translate .6s var(--suavecito),
+               transform .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .sticker-slot.pegado{opacity:1;translate:0 0}
+  /* los iconos flotantes entran JUNTO con su sticker — misma fade +
+     slide de 12px, mismo timing. opacity/translate como propiedades
+     separadas: no pelean con el transform del flote infinito ni con
+     el hover (REGLA CERO intacta: posicion/tamaño/margenes del icono
+     no se tocan) */
+  .icono_flotante_xd{opacity:0;translate:0 12px;transition:opacity .6s var(--suavecito),translate .6s var(--suavecito)}
+  .icono_flotante_xd.pegado{opacity:1;translate:0 0}
+}
+
+/* hover SOLO donde hay hover real (en touch no se simula) —
+   "aplanar el sticker con el dedo" */
+@media (hover:hover) and (pointer:fine){
+  .sticker-slot:hover{transform:rotate(0deg) scale(1.02)}
+}
+.sticker-slot:focus-within{transform:rotate(0deg) scale(1.02)}
+
+
+  
+/* cosita del scroll de abajo */
+.indicador_scroll{
+  position:absolute;
+  bottom:clamp(24px,4vh,48px);
+  left:50%;transform:translateX(-50%);
+  z-index:34;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:0;
+}
+/* nota al margen del manuscrito: caligrafia dancing script +
+   flecha dibujada a mano que respira */
+.indicador_scroll__texto{
+  font-family:'Dancing Script',cursive;
+  font-size:21px;font-weight:700;
+  letter-spacing:.04em;text-transform:none;
+  opacity:.6;
+}
+.flecha_scroll{
+  width:19px;height:62px;overflow:visible;
+  opacity:.6;
+}
+.flecha_scroll path:nth-of-type(n+2){opacity:0}
+@media (prefers-reduced-motion: no-preference){
+  /* reloj 1 — estiramiento smooth: punto original → estira hacia
+     abajo → vuelve al punto original. origin:top = crece hacia
+     abajo. 1.35 maximo: mas ya deforma la cabeza de la flecha */
+  .flecha_scroll{
+    transform-origin:top center;
+    animation:estirar_flecha 2.4s ease-in-out infinite;
+  }
+  @keyframes estirar_flecha{
+    0%{transform:scaleY(1)}
+    45%{transform:scaleY(1.35)}
+    100%{transform:scaleY(1)}
+  }
+  /* reloj 2 — boil 8fps entre los 3 paths, ventanas SOLAPADAS
+     (regla anti-parpadeo del garabato: jamas un hueco sin path) */
+  @keyframes boil_flecha{
+    0%,38.2%{opacity:1}
+    38.3%,100%{opacity:0}
+  }
+  .flecha_scroll path{animation:boil_flecha .375s steps(1) infinite}
+  .flecha_scroll path:nth-of-type(2){animation-delay:.125s}
+  .flecha_scroll path:nth-of-type(3){animation-delay:.25s}
+}
+
+
+/*
+  ┌──────────────────────────────────┐
+  │  cursor personalizado             │
+  │  el circulito que sigue al mouse  │
+  └──────────────────────────────────┘
+*/
+
+/* El cursor se habilita solo después de recibir movimiento de un ratón. */
+.cursor_circulote,.cursor_puntito{display:none}
+
+.texto_cargando{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  z-index:52;
+  font-family:var(--fuente_display);font-weight:800;
+  font-size:15px;letter-spacing:0.2em;color:#fff;
+   pointer-events:none;
+}
+
+
+/*
+  ┌──────────────────────────────────────────┐
+  │  animaciones ps1 - el jitter retro        │
+  │  se ve como si temblara todo pixeleado    │
+  │  no le muevas al steps() o se ve raro    │
+  └──────────────────────────────────────────┘
+*/
+
+/* los keyframes llevan var(--prx/--pry) DENTRO: asi el micro-parallax
+   convive con el jitter sin crear stacking contexts que rompan
+   el dialogo blob↔texto */
+@keyframes jitter_ps1_linea1 {
+  0%, 100% { transform: rotate(-1.5deg) translateX(-0.5vw) translate(var(--prx,0px),var(--pry,0px)) translate(0px, 0px); }
+  25% { transform: rotate(-1.5deg) translateX(-0.5vw) translate(var(--prx,0px),var(--pry,0px)) translate(0.4px, -2.2px); }
+  50% { transform: rotate(-1.5deg) translateX(-0.5vw) translate(var(--prx,0px),var(--pry,0px)) translate(-0.3px, 0.8px); }
+  75% { transform: rotate(-1.5deg) translateX(-0.5vw) translate(var(--prx,0px),var(--pry,0px)) translate(0.5px, -1.0px); }
+}
+@keyframes jitter_ps1_linea2 {
+  0%, 100% { transform: rotate(0.5deg) translateX(2vw) translate(var(--prx,0px),var(--pry,0px)) translate(0px, 0px); }
+  30% { transform: rotate(0.5deg) translateX(2vw) translate(var(--prx,0px),var(--pry,0px)) translate(-0.5px, 1.8px); }
+  60% { transform: rotate(0.5deg) translateX(2vw) translate(var(--prx,0px),var(--pry,0px)) translate(0.4px, -1.5px); }
+  85% { transform: rotate(0.5deg) translateX(2vw) translate(var(--prx,0px),var(--pry,0px)) translate(-0.2px, 0.5px); }
+}
+@keyframes jitter_ps1_linea3 {
+  0%, 100% { transform: rotate(-0.8deg) translateX(clamp(30px,6vw,100px)) translate(var(--prx,0px),var(--pry,0px)) translate(0px, 0px); }
+  20% { transform: rotate(-0.8deg) translateX(clamp(30px,6vw,100px)) translate(var(--prx,0px),var(--pry,0px)) translate(0.7px, -2.8px); }
+  50% { transform: rotate(-0.8deg) translateX(clamp(30px,6vw,100px)) translate(var(--prx,0px),var(--pry,0px)) translate(-0.4px, 1.2px); }
+  80% { transform: rotate(-0.8deg) translateX(clamp(30px,6vw,100px)) translate(var(--prx,0px),var(--pry,0px)) translate(0.3px, -0.8px); }
+}
+@keyframes jitter_ps1_sub {
+  0%, 100% { transform: rotate(-0.3deg) translate(var(--prx,0px),var(--pry,0px)) translate(0px, 0px); }
+  40% { transform: rotate(-0.3deg) translate(var(--prx,0px),var(--pry,0px)) translate(0.3px, 1.2px); }
+  70% { transform: rotate(-0.3deg) translate(var(--prx,0px),var(--pry,0px)) translate(-0.2px, -0.8px); }
+}
+@keyframes jitter_ps1_botones {
+  0%, 100% { transform: translate(var(--prx,0px),var(--pry,0px)) translate(0px, 0px); }
+  35% { transform: translate(var(--prx,0px),var(--pry,0px)) translate(0.3px, -1.5px); }
+  65% { transform: translate(var(--prx,0px),var(--pry,0px)) translate(-0.2px, 0.8px); }
+}
+
+.contenido_del_hero.ya_se_ve .linea_titulo_1 {
+  animation: jitter_ps1_linea1 4.8s steps(8) infinite;
+}
+.contenido_del_hero.ya_se_ve .linea_titulo_2 {
+  animation: jitter_ps1_linea2 5.5s steps(8) infinite;
+   animation-delay: -1.8s;
+}
+.contenido_del_hero.ya_se_ve .linea_titulo_3 {
+  animation: jitter_ps1_linea3 4.0s steps(6) infinite;
+  animation-delay: -0.9s;
+}
+.contenido_del_hero.ya_se_ve .subtitulo_hero {
+  animation: jitter_ps1_sub 6.5s steps(10) infinite;
+  animation-delay: -2.5s;
+}
+.contenido_del_hero.ya_se_ve .fila_botones {
+  animation: jitter_ps1_botones 5.2s steps(8) infinite;
+  animation-delay: -1.2s;
+}
+
+/* responsive - celulares
+   (los font-size YA NO se tocan aqui: la escala fluida unica se encarga) */
+@media(max-width:640px){
+  .linea_titulo_1::before{display:none}
+  /* cejita a 2 lineas: tracking que respira, rayitas mas cortas y
+     flanqueando el CENTRO del bloque (no la linea 1 colgada) */
+  .cejita{letter-spacing:.22em;align-items:center}
+  .cejita::before,.cejita::after{width:18px}
+  .salto_cejita{display:inline}
+  /* el badge de scroll deja de fotobombear a los stickers: en cel
+     se va al borde derecho como marginalia editorial — texto
+     vertical + su rayita pulsante debajo, en el carril oscuro que
+     nadie usa. en desktop sigue centrado abajo como siempre */
+  .indicador_scroll{
+    left:auto;right:10px;bottom:16px;
+    transform:none;
+    gap:10px;
+  }
+  /* el blackletter va HORIZONTAL tambien en cel: "haz scroll" es
+     cortito y rellena bien el margen (blackletter vertical se lee
+     como maldicion, prohibido) */
+  .subtitulo_hero{max-width:30ch;font-size:1rem;margin-left:clamp(10px,4vw,30px)}
+  .fila_botones{margin-left:clamp(10px,4vw,30px)}
+  /* la cita editorial ignora el max-width/font-size viejos: sus
+     lineas son bloques con su propio clamp */
+  .subtitulo_hero.cita_hero{max-width:none;font-size:clamp(1.5rem,6.5vw,2.6rem)}
+   .linea_decorativa{display:none}
+  /* stickers a 390px: papel/cinta/burst se recogen pa que nada se
+     desborde del viewport (el hero ya trae overflow:hidden de red) */
+  .papel-sticker{width:114%;height:164%}
+  .burst-sticker--azul{width:60px;left:-10px;top:-26px}
+  .burst-sticker--amarillo{width:64px;right:-18px;top:-28px}
+  .cinta-sticker{width:72px}
+  .cinta-sticker--izq{left:-26px;top:-24px}
+  .cinta-sticker--der{right:-26px;top:-24px}
+}
+/*
+  ╔════════════════════════════════════════════════════╗
+  ║  SECCIONES DEL SITIO (todo lo de abajo del hero)    ║
+  ║  formula editorial robada del /ref de intensity:    ║
+  ║  eyebrow → titulo → intro, ritmo en clamp,          ║
+  ║  acentos en fraunces italica, numeros seriales      ║
+  ╚════════════════════════════════════════════════════╝
+*/
+
+/*
+  ┌────────────────────────────────────────────────┐
+  │  PULL-QUOTE DEL HERO — subtitulo editorial        │
+  │  fraunces + marks coral que "pasan el marcador"   │
+  │  + un shot de blackletter con garabato svg        │
+  │  SIN caja ni fondo: la pixel cloud respira entre  │
+  │  las lineas. hereda margen/parallax/jitter de     │
+  │  .subtitulo_hero (por eso conserva esa clase)     │
+  └────────────────────────────────────────────────┘
+*/
+.subtitulo_hero.cita_hero{
+  font-family:var(--fuente_serif);
+  font-size:clamp(1.5rem,6.5vw,2.6rem);
+  line-height:1.25;
+  color:#EDE6D6;
+  text-shadow:0 1px 12px rgba(0,0,0,.45);
+  max-width:none;
+}
+.linea_cita{
+  display:block;
+  text-wrap:balance;
+  margin-top:.35em;
+}
+.linea_cita:first-child{margin-top:0}
+/* L3: italica 650, un paso mas grande — el remate de la estrofa */
+.linea_cita--3{
+  font-style:italic;font-weight:650;
+  font-size:1.1em;
+}
+
+/* marks coral — estado FINAL por defecto (asi reduced-motion y
+   sin-js ven el resultado terminado sin depender de clases) */
+.marca_cita{
+  background-color:transparent;
+  /* TINTA VIVA: trazo de marcador REAL escaneado en vez de gradiente
+     plano. con box-decoration-break:clone cada fragmento de linea
+     recibe SU trazo completo = dos pasadas de marcador independientes,
+     exactamente como subraya un humano (correcto y deseado).
+     OJO: el png trae mucho aire transparente alrededor de la tinta
+     (asi se pidio, pa collage) → el background-size va SOBRADO y
+     centrado pa que la TINTA llene la caja del mark y las astas de
+     las letras no se salgan del trazo */
+  --tinta-w:112%;
+  --tinta-h:340%;
+  background-image:url('trazo-marcador-largo.png');
+  background-repeat:no-repeat;
+  background-size:var(--tinta-w) var(--tinta-h);
+  background-position:50% 50%;
+  color:#14191A;
+  padding:.06em .18em;
+  box-decoration-break:clone;
+  -webkit-box-decoration-break:clone;
+  /* refuerzo crema sutil: si un borde de letra cae en una veta
+     semi-transparente del trazo, no se pierde contra el fondo */
+  text-shadow:0 0 6px rgba(237,230,214,.35);
+}
+/* rotacion SOLO en L3: su mark es la oracion entera y el
+   inline-block no rompe nada. en L1 el mark puede partirse en dos
+   lineas a 390px (pa eso esta el clone) y el inline-block se lo
+   impedia → L1 va horizontal, como autoriza la receta */
+.linea_cita--3 .marca_cita{
+  display:inline-block;
+  transform:rotate(0.6deg);
+  /* L3 lleva el trazo corto: pasada mas decidida, doble banda.
+     su tinta es mas angosta dentro del png → mas zoom horizontal.
+     marcador que se pasa de largo: padding-INLINE ensancha la caja
+     (el shorthand del base guarda el .06em vertical, no se pisa)
+     → la tinta EMPIEZA antes del texto y TERMINA despues, como
+     subraya un humano. --tinta-w sube poquito: el grueso lo pone
+     el padding pa no decapitar las puntas del trazo */
+  background-image:url('trazo-marcador-corto.png');
+  --tinta-w:165%;
+  padding-inline:.45em;
+}
+
+/* la palabra blackletter — 1.35em de compensacion optica */
+.palabra_pirata{
+  position:relative;
+  display:inline-block;
+  font-family:'Pirata One',var(--fuente_serif);
+  font-style:normal;font-weight:400;
+  font-size:1.35em;
+  line-height:1;
+  color:#FF4B57;
+}
+/* garabato a mano alzada que la rodea, crema sobre coral.
+   TINTA VIVA: son 5 paths hermanos (la misma elipse redibujada a
+   mano 5 veces) — en reposo solo se ve el primero; el boil los
+   rota a ~8fps dentro de no-preference */
+.garabato_pirata{
+  position:absolute;
+  left:-13%;top:-18%;
+  width:128%;height:136%;
+  overflow:visible;
+  pointer-events:none;
+}
+.garabato_pirata path:nth-of-type(n+2){opacity:0}
+
+/* animacion de entrada — TODO el estado oculto vive aqui dentro:
+   con reduced-motion nada de esto existe y se ve el final directo */
+@media (prefers-reduced-motion: no-preference){
+  .linea_cita{
+    opacity:0;translate:0 12px;
+    transition:opacity .5s ease-out,translate .5s ease-out;
+  }
+  .linea_cita.entro{opacity:1;translate:0 0}
+  .marca_cita{
+    background-size:0% var(--tinta-h);
+    color:#EDE6D6;
+    transition:background-size .6s ease-out,color .6s ease-out;
+  }
+  .linea_cita.entro .marca_cita{
+    background-size:var(--tinta-w) var(--tinta-h);
+    color:#14191A;
+    transition-delay:.4s;
+  }
+  .garabato_pirata path{
+    stroke-dasharray:430;stroke-dashoffset:430;
+    transition:stroke-dashoffset .7s ease-out .9s;
+  }
+  .linea_cita.entro .garabato_pirata path{stroke-dashoffset:0}
+
+  /* ── LINE BOIL REAL (tinta viva) ── 5 variaciones del trazo
+     redibujadas de verdad, turnandose por background-image a ~8fps.
+     esto NO es transicion (background-image no transiciona): cada
+     keyframe SOSTIENE su frame un rango de % y salta seco al
+     siguiente — animacion 2D frame a frame, como se debe.
+     ciclo: 5 frames / 8fps = .625s.
+     OJO ingenieria: todo va por background-* asi que da IGUAL que
+     el mark de L1 sea inline y se parta en dos lineas — cada
+     fragmento clonado hierve solito con su trazo completo.
+     el frame 1 = el png del estado base → el reveal pinta con el
+     mismo trazo de siempre y el boil arranca desde ahi sin salto.
+     (el "reversar como frame extra" quedo fuera: scaleX(-1) va en
+     el ELEMENTO y voltearia el TEXTO del mark, no solo la tinta —
+     y con 5 frames reales por trazo ya no hace falta el truco) */
+  /* largo: 5 frames / 8fps = ciclo .625s */
+  @keyframes boil_marca_larga{
+    0%,19.9%{background-image:url('trazo-marcador-largo.png')}
+    20%,39.9%{background-image:url('trazo-marcador-largo-2.png')}
+    40%,59.9%{background-image:url('trazo-marcador-largo-3.png')}
+    60%,79.9%{background-image:url('trazo-marcador-largo-4.png')}
+    80%,100%{background-image:url('trazo-marcador-largo-5.png')}
+  }
+  @keyframes boil_marca_corta{
+    0%,19.9%{background-image:url('trazo-marcador-corto.png')}
+    20%,39.9%{background-image:url('trazo-marcador-corto-2.png')}
+    40%,59.9%{background-image:url('trazo-marcador-corto-3.png')}
+    60%,79.9%{background-image:url('trazo-marcador-corto-4.png')}
+    80%,100%{background-image:url('trazo-marcador-corto-5.png')}
+  }
+  .linea_cita.entro .marca_cita{
+    animation:boil_marca_larga .625s steps(1) infinite;
+  }
+  /* L3 con SUS frames cortos + delay negativo: desfasada de L1 pa
+     que las dos tintas no hiervan en sincronia de robot */
+  .linea_cita--3.entro .marca_cita{
+    animation-name:boil_marca_corta;
+    animation-delay:-.25s;
+  }
+
+  /* boil del garabato: ahora 5 frames (mas tiras) a 8fps, ciclo
+     .625s. CAZA DEL PARPADEO: antes cada ventana cerraba en 32.9% y
+     la siguiente abria en 33.3% del ciclo → micro-hueco donde NINGUN
+     path era visible; cuando un frame de pantalla caia justo ahi, el
+     garabato desaparecia un instante (el parpadeo "que a veces" — no
+     era ilusion). fix: las ventanas ahora se SOLAPAN ~19ms (mas que
+     un frame de pantalla a 60hz) → siempre hay al menos un trazo
+     pintado, matematicamente imposible el hueco. el reveal de
+     dashoffset les aplica a los 5 en sincronia → el dibujado inicial
+     sigue funcionando mientras hierve */
+  @keyframes boil_garabato{
+    0%,22.9%{opacity:1}
+    23%,100%{opacity:0}
+  }
+  .linea_cita.entro .garabato_pirata path{
+    animation:boil_garabato .625s steps(1) infinite;
+  }
+  .linea_cita.entro .garabato_pirata path:nth-of-type(2){animation-delay:.125s}
+  .linea_cita.entro .garabato_pirata path:nth-of-type(3){animation-delay:.25s}
+  .linea_cita.entro .garabato_pirata path:nth-of-type(4){animation-delay:.375s}
+  .linea_cita.entro .garabato_pirata path:nth-of-type(5){animation-delay:.5s}
+}
+
+.cuerpo_sitio{position:relative;z-index:10;background:var(--vacio)}
+.seccion{
+  position:relative;
+  padding:clamp(84px,13vh,150px) clamp(22px,5vw,64px);
+  border-top:1px solid rgba(255,255,255,.06);
+  overflow:hidden;
+}
+.contenedor_seccion{max-width:1180px;margin:0 auto}
+.cejita_seccion{
+  display:inline-flex;align-items:center;gap:.7em;
+  font-size:clamp(10px,1vw,12px);font-weight:600;
+  letter-spacing:.24em;text-transform:uppercase;
+  opacity:.55;margin-bottom:clamp(20px,3vh,34px);
+}
+.cejita_seccion::before{content:"";width:34px;height:1px;background:var(--blanco);opacity:.4}
+.titulo_seccion{
+  font-family:var(--fuente_display);font-weight:800;
+  font-size:clamp(2.2rem,5.6vw,4.6rem);
+  line-height:.98;letter-spacing:-.03em;max-width:18ch;
+}
+.titulo_seccion em{
+  font-family:var(--fuente_serif);font-style:italic;font-weight:600;
+  color:var(--rojito);letter-spacing:-.02em;
+}
+.intro_seccion{
+  margin-top:clamp(20px,3vh,30px);max-width:52ch;
+  font-size:clamp(1rem,1.3vw,1.15rem);line-height:1.65;opacity:.7;
+}
+
+/* ─── servicios ─── */
+.lista_servicios{
+  margin-top:clamp(44px,7vh,72px);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:1px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.07);
+}
+.servicio{background:var(--vacio);padding:clamp(26px,3vw,40px);transition:background .5s var(--suavecito)}
+.servicio:hover{background:#0a0a12}
+.numero_servicio{font-family:var(--fuente_serif);font-style:italic;color:var(--azul_brilloso);font-size:clamp(.95rem,1.2vw,1.1rem)}
+.servicio h3{font-family:var(--fuente_display);font-weight:700;font-size:clamp(1.25rem,1.9vw,1.7rem);letter-spacing:-.02em;margin:14px 0 12px}
+.servicio p{font-size:clamp(.92rem,1.05vw,1rem);line-height:1.6;opacity:.62}
+
+/* ===== LAS RUINAS DEL MUSEO =====
+   la seccion 01 ya no es sala: es la EXCAVACION. campo de pasto
+   billboard estilo ps1 en 3 capas al pie de la seccion, el busto
+   PLANTADO entre la capa media y la cercana (la cercana le tapa
+   la base: eso lo ancla al piso), columna rota, luciernagas y
+   unos lentes 3d que llegan volando por scroll hasta ponerse en
+   la cara de la estatua. viento por skew desfasado en la tela
+   interior + parallax por js en el wrapper (cero pelea de
+   transforms).
+   REGLA CERO: .titulo_seccion/.intro_seccion/.lista_servicios las
+   comparte #menus -> TODO va scopeado a #servicios. */
+/* el colchon SIEMPRE mas alto que el campo: si no, las cards
+   (fondo solido, z6) le cortan la cabeza al busto */
+#servicios{padding-bottom:clamp(380px,48vh,600px)}
+#servicios::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    linear-gradient(180deg,#050507 0%,rgba(5,5,7,0) 14%,rgba(5,5,7,0) 86%,#050507 100%),
+    radial-gradient(ellipse at 70% 30%,rgba(14,46,30,.55),transparent 65%);
+}
+/* scanlines: se SIENTEN, no se VEN */
+#servicios::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,rgba(82,255,168,.028) 0 1px,transparent 1px 3px);
+}
+#servicios .contenedor_seccion{position:relative;z-index:2}
+#servicios .titulo_seccion em{color:#52FFA8}
+#servicios .intro_seccion{position:relative;z-index:6}
+#servicios .lista_servicios{position:relative;z-index:6}
+#servicios .numero_servicio{color:#52FFA8}
+#servicios .servicio:hover{background:#071009;box-shadow:inset 0 0 0 1px rgba(82,255,168,.35)}
+
+.enredadera{position:absolute;pointer-events:none}
+.enredadera img{display:block;width:100%;height:auto}
+/* la 1 ahora BROTA del pasto junto a la columna (vive dentro de
+   .ruinas_museo); la 2 sigue asomada arriba-derecha */
+.enredadera--1{left:1%;bottom:8px;width:clamp(120px,15vw,230px);z-index:2;transform:rotate(-3deg);opacity:.85}
+.enredadera--2{right:0;top:0;width:clamp(120px,16vw,260px);transform:translate(25%,-25%) rotate(3deg);opacity:.7;z-index:1}
+
+/* ── EL CAMPO: franja de ruinas al pie de la seccion ── */
+/* z7 (cards: z6 dentro de contenedor z2): el vuelo de los lentes
+   pasa POR ENCIMA de las cards, no escondido detras. el colchon
+   de padding evita que el pasto invada las cards en reposo */
+.ruinas_museo{position:absolute;left:0;right:0;bottom:0;height:clamp(350px,44vh,550px);pointer-events:none;z-index:7}
+/* cada capa = wrapper (parallax js) + tela (viento css) */
+.capa_pasto{position:absolute;left:-2%;right:-2%}
+.pasto_tela{width:100%;height:100%;background-repeat:repeat-x;background-position:bottom left;transform-origin:bottom center}
+.capa_pasto--lejos{height:clamp(90px,12vh,150px);bottom:clamp(46px,6vh,84px);z-index:1;opacity:.8}
+.capa_pasto--lejos .pasto_tela{background-image:url('pasto-lejos.png');background-size:auto 100%}
+.capa_pasto--medio{height:clamp(120px,16vh,200px);bottom:clamp(16px,2.5vh,34px);z-index:2}
+.capa_pasto--medio .pasto_tela{background-image:url('pasto-medio.png');background-size:auto 100%}
+.capa_pasto--cerca{height:clamp(150px,20vh,250px);bottom:-4px;z-index:4}
+.capa_pasto--cerca .pasto_tela{background-image:url('pasto-cerca.png');background-size:auto 100%}
+
+.columna_ruinas{position:absolute;left:clamp(10px,4vw,70px);bottom:clamp(28px,4vh,58px);width:clamp(110px,13vw,200px);z-index:2;opacity:.92}
+.columna_ruinas img{display:block;width:100%;height:auto}
+
+/* dimensionado por ALTURA (no por ancho): el busto JAMAS debe
+   crecer mas que el campo que lo contiene */
+.busto_ruinas{position:absolute;right:clamp(16px,7vw,120px);bottom:clamp(34px,5vh,66px);height:clamp(230px,30vh,380px);z-index:3}
+.estatua_ruinas{display:block;height:100%;width:auto}
+/* sombra de contacto: lo que de verdad PLANTA a la estatua */
+.busto_ruinas::after{content:"";position:absolute;left:6%;right:6%;bottom:-12px;height:36px;background:radial-gradient(ellipse at center,rgba(0,0,0,.6),transparent 70%);z-index:-1}
+/* los lentes: SANDWICH DE PROFUNDIDAD (idea del usuario — el
+   z-buffer hecho con pngs). dos capas del MISMO canvas, mismo
+   left/top/width, movidas por el js con el MISMO transform:
+     pata_ruinas   (pata-lentes.png)  z1 → DETRAS del busto
+     estatua       (busto-pelon.png)  z2 → en medio
+     lentes_ruinas (lentes-solos.png) z3 → DELANTE
+   en vuelo las dos capas viajan juntas = lentes completos; al
+   aterrizar la pata se DESLIZA detras de la cabeza porque
+   siempre estuvo en la capa de abajo. cero swap, cero corte,
+   profundidad continua — el cambiazo brusco murio de raiz */
+.lentes_ruinas,.pata_ruinas{position:absolute;left:11%;top:8%;width:72%;will-change:transform}
+.lentes_ruinas{z-index:3}
+.pata_ruinas{z-index:1}
+.estatua_ruinas{position:relative;z-index:2}
+.lentes_img{display:block;width:100%;height:auto}
+
+.luciernaga{position:absolute;width:5px;height:5px;border-radius:50%;background:#B8FFD9;box-shadow:0 0 10px 3px rgba(82,255,168,.55);opacity:.4;z-index:5}
+.luciernaga--1{left:12%;bottom:110px}
+.luciernaga--2{left:25%;bottom:170px}
+.luciernaga--3{left:39%;bottom:90px}
+.luciernaga--4{left:54%;bottom:150px}
+.luciernaga--5{left:66%;bottom:100px}
+.luciernaga--6{left:79%;bottom:195px}
+.luciernaga--7{left:89%;bottom:130px}
+.luciernaga--8{left:7%;bottom:215px}
+
+/* entrada + vida: solo si el usuario quiere movimiento */
+@media (prefers-reduced-motion: no-preference){
+  .ruinas_museo,.enredadera--2{opacity:0;transition:opacity 1.1s var(--suavecito)}
+  .enredadera--2{transition-delay:.35s}
+  #servicios.museo_visible .ruinas_museo{opacity:1}
+  #servicios.museo_visible .enredadera--2{opacity:.7}
+  /* viento: cada capa con su ritmo, desfasadas -> se lee CAMPO */
+  #servicios.museo_visible .capa_pasto--cerca .pasto_tela{animation:viento_pasto 8s ease-in-out infinite alternate}
+  #servicios.museo_visible .capa_pasto--medio .pasto_tela{animation:viento_pasto 11s ease-in-out -3s infinite alternate}
+  #servicios.museo_visible .capa_pasto--lejos .pasto_tela{animation:viento_pasto 14s ease-in-out -6s infinite alternate}
+  #servicios.museo_visible .enredadera img{animation:mecer_enredadera 9s ease-in-out infinite alternate}
+  /* luciernagas: vagan + parpadean (dos animaciones, ritmos primos
+     -> el patron tarda MUCHO en repetirse) */
+  .luciernaga{opacity:0}
+  #servicios.museo_visible .luciernaga{animation:vagar_luci 13s ease-in-out infinite,parpadeo_luci 7s linear infinite}
+  #servicios.museo_visible .luciernaga--2{animation-duration:16s,9s;animation-delay:-5s,-3s}
+  #servicios.museo_visible .luciernaga--3{animation-duration:11s,8s;animation-delay:-2s,-1s}
+  #servicios.museo_visible .luciernaga--4{animation-duration:17s,10s;animation-delay:-8s,-4s}
+  #servicios.museo_visible .luciernaga--5{animation-duration:12s,6s;animation-delay:-4s,-2s}
+  #servicios.museo_visible .luciernaga--6{animation-duration:15s,11s;animation-delay:-9s,-6s}
+  #servicios.museo_visible .luciernaga--7{animation-duration:10s,9s;animation-delay:-1s,-5s}
+  #servicios.museo_visible .luciernaga--8{animation-duration:18s,8s;animation-delay:-7s,-2s}
+  /* el CLICK de cuando los lentes aterrizan (js pone .puestos).
+     filter y no transform: el transform es territorio del js */
+  .lentes_ruinas.puestos{animation:pop_lentes .65s ease-out 1}
+  @keyframes viento_pasto{from{transform:skewX(-1.3deg)}to{transform:skewX(1.7deg)}}
+  @keyframes mecer_enredadera{from{transform:rotate(-1deg)}to{transform:rotate(1deg)}}
+  @keyframes vagar_luci{0%,100%{transform:translate(0,0)}25%{transform:translate(28px,-38px)}50%{transform:translate(-16px,-64px)}75%{transform:translate(20px,-26px)}}
+  @keyframes parpadeo_luci{0%,100%{opacity:0}12%{opacity:.9}30%{opacity:.25}55%{opacity:.85}80%{opacity:.12}}
+  @keyframes pop_lentes{0%{filter:brightness(1)}30%{filter:brightness(1.9) drop-shadow(0 0 16px rgba(82,255,168,.9))}100%{filter:brightness(1)}}
+}
+
+/* mobile: campo mas bajito, busto chico pero PLANTADO (nada de
+   fantasmas detras del parrafo), columna recortada al borde */
+@media (max-width:768px){
+  #servicios{padding-bottom:340px}
+  .ruinas_museo{height:310px}
+  .capa_pasto--lejos{height:70px;bottom:46px}
+  .capa_pasto--medio{height:100px;bottom:20px}
+  .capa_pasto--cerca{height:132px;bottom:-3px}
+  .busto_ruinas{right:4%;bottom:36px;height:230px;width:auto}
+  .columna_ruinas{left:-4%;bottom:28px;width:110px}
+  .enredadera--1{width:110px}
+  .enredadera--2{display:none}
+  .luciernaga--7,.luciernaga--8{display:none}
+}
+
+/* ─── portafolio (canvas en vivo) ─── */
+.proyecto{margin-top:clamp(48px,8vh,84px)}
+.cabecera_proyecto{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  gap:20px;flex-wrap:wrap;margin-bottom:clamp(18px,2.6vh,26px);
+}
+.numero_proyecto{font-family:var(--fuente_serif);font-style:italic;color:var(--rojito);font-size:1rem}
+.nombre_proyecto{font-family:var(--fuente_display);font-weight:800;font-size:clamp(1.8rem,3.6vw,3rem);letter-spacing:-.03em;line-height:1;margin-top:6px}
+.desc_proyecto{margin-top:8px;font-size:.9rem;opacity:.55;letter-spacing:.02em}
+.controles_proyecto{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.toggle_dispositivo{
+  display:inline-flex;border:1px solid rgba(255,255,255,.14);border-radius:100px;
+  padding:4px;background:rgba(255,255,255,.03);backdrop-filter:blur(8px);
+}
+.opcion_toggle{
+  font-family:var(--fuente_body);font-size:11px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--blanco);background:none;border:none;border-radius:100px;
+  padding:9px 18px;cursor:none;opacity:.5;
+  transition:background .35s var(--suavecito),color .35s var(--suavecito),opacity .35s;
+}
+@media(pointer:coarse){.opcion_toggle{cursor:pointer}}
+.opcion_toggle.activa{background:var(--blanco);color:#000;opacity:1}
+.enlace_vivo{
+  font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  border-bottom:1px solid rgba(255,255,255,.25);padding-bottom:3px;
+  transition:border-color .3s;
+}
+.enlace_vivo:hover{border-color:var(--rojito)}
+
+.marco_navegador{
+  border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;
+  background:#0b0b12;box-shadow:0 30px 80px rgba(0,0,0,.5);
+}
+.barra_marco{
+  display:flex;align-items:center;gap:6px;padding:10px 14px;
+  background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06);
+}
+.punto_marco{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.15)}
+.punto_marco--rojo{background:rgba(255,51,102,.55)}
+.punto_marco--azul{background:rgba(45,91,255,.55)}
+.url_marco{margin-left:10px;font-size:11px;letter-spacing:.04em;opacity:.45}
+.pantalla_marco{position:relative;width:100%;aspect-ratio:1440/900;overflow:hidden;background:#0a0a12}
+.pantalla_marco iframe{position:absolute;top:0;left:0;border:0;transform-origin:0 0;background:#0a0a12}
+
+/* modo movil: el marco se angosta a proporciones de cel */
+.proyecto[data-modo="movil"] .marco_navegador{width:min(360px,92%);margin:0 auto;border-radius:34px}
+.proyecto[data-modo="movil"] .pantalla_marco{aspect-ratio:390/844}
+.proyecto[data-modo="movil"] .barra_marco{justify-content:center}
+.proyecto[data-modo="movil"] .punto_marco{display:none}
+.nota_proyectos{margin-top:clamp(26px,4vh,40px);font-family:var(--fuente_serif);font-style:italic;font-size:.9rem;opacity:.4}
+
+/* ─── proceso ─── */
+.pasos_proceso{
+  margin-top:clamp(44px,7vh,72px);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:clamp(30px,4vw,44px) clamp(22px,3vw,36px);
+}
+.paso{position:relative;padding-top:22px;border-top:1px solid rgba(255,255,255,.12)}
+.numero_paso{
+  position:absolute;top:-13px;left:0;background:var(--vacio);padding-right:12px;
+  font-family:var(--fuente_serif);font-style:italic;font-weight:600;
+  color:var(--azul_brilloso);font-size:1.05rem;
+}
+.paso h3{font-family:var(--fuente_display);font-weight:700;font-size:clamp(1.1rem,1.5vw,1.35rem);letter-spacing:-.02em;margin-bottom:10px}
+.paso p{font-size:clamp(.9rem,1vw,.98rem);line-height:1.6;opacity:.6}
+
+/* ─── contacto ─── */
+.titulo_contacto{
+  font-family:var(--fuente_display);font-weight:800;
+  font-size:clamp(2.6rem,8vw,6.5rem);line-height:.92;letter-spacing:-.04em;
+}
+.titulo_contacto em{font-family:var(--fuente_serif);font-style:italic;font-weight:600;color:var(--rojito)}
+.acciones_contacto{margin-top:clamp(36px,5vh,56px);display:flex;gap:clamp(14px,1.6vw,22px);flex-wrap:wrap}
+.datos_contacto{margin-top:clamp(36px,6vh,60px);display:flex;gap:clamp(24px,4vw,60px);flex-wrap:wrap}
+.dato_contacto span{display:block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.45;margin-bottom:8px}
+.dato_contacto a{
+  font-size:clamp(1rem,1.4vw,1.2rem);font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:2px;
+  transition:border-color .3s;
+}
+.dato_contacto a:hover{border-color:var(--rojito)}
+
+/* ─── footer ─── */
+.pie_sitio{
+  position:relative;z-index:10;
+  border-top:1px solid rgba(255,255,255,.07);background:#040406;
+  padding:clamp(30px,5vh,48px) clamp(22px,5vw,64px);
+  display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.logo_pie{height:20px;width:auto;opacity:.85}
+.texto_pie{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.4}
+</style>
+<link rel="stylesheet" href="css/recorrido.css">
+<script src="js/recorrido.js" defer></script>
+<link rel="stylesheet" href="css/editorial.css">
+<link rel="stylesheet" href="css/editorial-responsive.css">
+<script src="js/recorrido-motion.js" defer></script>
+<link rel="stylesheet" href="css/servicios-direccion.css">
+<link rel="stylesheet" href="css/cursor.css">
+<script src="js/cursor.js" defer></script>
+<link rel="stylesheet" href="css/escaparate.css">
+<script src="js/escaparate.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@1,6..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/soma-paisaje.css">
+<script src="js/soma-paisaje.js" defer></script>
+<script src="js/intro-soma.js" defer></script>
+<script src="js/inicio-seguro.js" defer></script>
+<link rel="stylesheet" href="css/inicio-seguro.css">
+</head>
+<body>
+
+  <!--
+    ┌─────────────────────────────────────────────┐
+    │  FILTRO SVG - distorsion tipo ps1            │
+    │  esto genera el ruido y lo aplica al texto   │
+    │  el seed cambia cada 120ms para el efecto    │
+    │  si lo quitas se ve normal y aburrido        │
+    └─────────────────────────────────────────────┘
+  -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <filter id="ps1-distortion" x="-2%" y="-2%" width="104%" height="104%" color-interpolation-filters="sRGB">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.018 0.015"
+          numOctaves="2"
+          seed="1"
+          result="noise"
+        >
+          <animate
+            attributeName="seed"
+            values="1;4;2;7;3;8;5;9;1"
+            dur="0.96s"
+            repeatCount="indefinite"
+            calcMode="discrete"
+          />
+        </feTurbulence>
+
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="noise"
+          scale="2.5"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+    </defs>
+  </svg>
+
+  <div id="capa_intro"></div>
+  <div id="linea_intro"></div>
+  <div class="texto_cargando" id="txtCargando">SOMA_</div>
+
+  <!-- el grain SI es global (fixed), igual que en intensity -->
+  <div class="grano_textura" aria-hidden="true"></div>
+
+  <div class="cursor_circulote" id="cursorCirculote" aria-hidden="true"><span class="cursor-registro"><svg class="cursor-marcas" viewBox="0 0 40 40" focusable="false"><path d="M20 0v5m0 30v5M0 20h5m30 0h5"/></svg><svg class="cursor-flecha" viewBox="0 0 24 24" focusable="false"><path d="m6 18 12-12M6 6h12v12"/></svg></span></div>
+  <div class="cursor_puntito" id="cursorPuntito" aria-hidden="true"></div>
+
+  <div class="atmosfera_nav" aria-hidden="true"></div>
+  <nav class="barra_nav" id="navPrincipal">
+    <a href="#" class="logo_del_nav" data-hover aria-label="SOMA — inicio">
+      <img src="logo-soma.png" alt="SOMA" class="img_logo_nav">
+    </a>
+    <a class="contacto-nav" href="https://wa.me/523411786711?text=Hola%20SOMA%2C%20quiero%20platicar%20sobre%20un%20proyecto%20para%20mi%20negocio." target="_blank" rel="noopener" data-hover>Hablemos <span aria-hidden="true">↗</span></a>
+    <button class="boton_menu" id="botonMenu" aria-label="Abrir menú" aria-expanded="false" aria-controls="overlayMenu" data-hover>
+      <span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="overlay_menu" id="overlayMenu">
+    <nav class="navegacion_overlay" aria-label="Menú principal">
+      <a href="#" class="enlace_overlay" data-hover><span class="indice_overlay">01</span>Inicio</a>
+      <a href="#servicios" class="enlace_overlay" data-hover><span class="indice_overlay">02</span>Qué hacemos</a>
+      <a href="#portafolio" class="enlace_overlay" data-hover><span class="indice_overlay">03</span>Proyectos reales</a>
+      <a href="#contacto" class="enlace_overlay" data-hover><span class="indice_overlay">04</span>Tu proyecto</a>
+      <a href="#menus" class="enlace_overlay" data-hover><span class="indice_overlay">05</span>Para restaurantes</a>
+      <a href="#proceso" class="enlace_overlay" data-hover><span class="indice_overlay">06</span>Cómo empezamos</a>
+      <a href="#dudas" class="enlace_overlay" data-hover><span class="indice_overlay">07</span>Dudas claras</a>
+    </nav>
+    <div class="pie_overlay">
+      <a href="https://wa.me/523411786711" target="_blank" rel="noopener" data-hover>WhatsApp</a>
+      <a href="https://www.instagram.com/somascale/" target="_blank" rel="noopener" data-hover>Instagram</a>
+      <a href="https://youtube.com/@7_wndal1" target="_blank" rel="noopener" data-hover>YouTube</a>
+    </div>
+  </div>
+
+  <!-- La apertura única es ahora #soma-paisaje. La intro se conserva arriba. -->
+
+  <!--
+    ╔══════════════════════════════════════════════╗
+    ║  CUERPO DEL SITIO — todo lo de abajo del hero ║
+    ╚══════════════════════════════════════════════╝
+  -->
+  <main class="cuerpo_sitio" id="recorrido-soma">
+    <nav class="indice-scroll" aria-label="Recorrido de la página" hidden>
+      <span class="indice-marca" aria-hidden="true">S/</span>
+      <a href="#servicios" aria-label="01 Qué hacemos">01<span>Qué hacemos</span></a>
+      <a href="#portafolio" aria-label="02 Proyectos">02<span>Proyectos</span></a>
+      <a href="#contacto" aria-label="03 Tu proyecto">03<span>Tu proyecto</span></a>
+      <a href="#menus" aria-label="04 Restaurantes">04<span>Restaurantes</span></a>
+      <a href="#proceso" aria-label="05 Proceso">05<span>Proceso</span></a>
+      <a href="#dudas" aria-label="06 Dudas">06<span>Dudas</span></a>
+      <button type="button" id="motion-toggle" aria-pressed="false" aria-label="Pausar animaciones del recorrido"><span aria-hidden="true">Ⅱ</span></button>
+      <span class="indice-progreso" aria-hidden="true"></span>
+    </nav>
+
+    <!-- ─────────── QUÉ HACEMOS ─────────── -->
+    <section class="seccion" id="servicios" aria-labelledby="titulo-servicios" data-chapter="01">
+      <!-- enredadera asomada arriba-derecha (la 1 vive en las ruinas) -->
+      <div class="enredadera enredadera--2" aria-hidden="true"><img src="enredadera-2.png" alt="" loading="lazy"></div>
+      <div class="contenedor_seccion">
+        <div class="direccion-servicios" id="punto-de-partida">
+          <div class="paisaje-recorrido" id="hero-recorrido">
+          <header class="direccion-apertura soma-paisaje" id="soma-paisaje" aria-labelledby="titulo-servicios">
+            <div class="paisaje-cabecera">
+              <a class="paisaje-marca" href="#" aria-label="SOMA — inicio">SOMA</a>
+              <p class="paisaje-descriptor">DESARROLLO WEB<br>&amp; ESTRATEGIA DIGITAL</p>
+              <nav class="paisaje-nav" aria-label="Explora SOMA"><a href="#contacto">IDEAS</a><span aria-hidden="true">/</span><a href="#portafolio">DISEÑO</a><span aria-hidden="true">/</span><a href="#proceso">DESARROLLO</a><span aria-hidden="true">/</span><a href="#portafolio">RESULTADOS</a></nav>
+              <details class="paisaje-menu" id="paisaje-menu">
+                <summary aria-label="Menú de la sección"><svg viewBox="0 0 30 24" aria-hidden="true"><path d="M8 6h19M16 12h11M3 18h24"/></svg></summary>
+                <nav aria-label="Menú de SOMA"><a href="#portafolio">Proyectos reales</a><a href="#contacto">Tu proyecto</a><a href="#menus">Para restaurantes</a><a href="#proceso">Cómo empezamos</a><a href="#dudas">Dudas claras</a></nav>
+              </details>
+            </div>
+            <div class="paisaje-composicion" id="paisaje-composicion">
+            <svg class="paisaje-filtros" aria-hidden="true" width="0" height="0" focusable="false">
+              <defs>
+                <filter id="paisaje-liquido" x="-15%" y="-45%" width="130%" height="190%" color-interpolation-filters="sRGB">
+                  <feImage href="images/titular-deformacion.svg" x="-15%" y="-45%" width="130%" height="190%" preserveAspectRatio="none" result="curva-editorial"/>
+                  <feDisplacementMap id="paisaje-desplazamiento" in="SourceGraphic" in2="curva-editorial" scale="44" xChannelSelector="R" yChannelSelector="G"/>
+                </filter>
+              </defs>
+            </svg>
+            <div class="paisaje-materia" aria-hidden="true">
+              <img class="paisaje-capa paisaje-cielo" fetchpriority="high" src="images/fondo-atmosferico.webp" width="1672" height="941" alt="" decoding="async">
+              <img class="paisaje-capa paisaje-arco" src="images/arquitectura-arco.webp" width="1086" height="1448" alt="" decoding="async">
+              <img class="paisaje-capa paisaje-agua" src="images/agua-superficie.webp" width="2140" height="735" alt="" decoding="async">
+              <img class="paisaje-capa paisaje-busto" src="images/busto-marmol.webp" width="1180" height="1333" alt="" decoding="async" data-paisaje-move="busto">
+              <img class="paisaje-capa paisaje-roca-alta" src="images/roca-flotante-superior.webp" width="1254" height="1254" alt="" decoding="async" data-paisaje-move="alta">
+              <img class="paisaje-capa paisaje-roca-izquierda" src="images/roca-fragmento-izquierdo.webp" width="1254" height="1254" alt="" decoding="async" data-paisaje-move="izquierda">
+              <img class="paisaje-capa paisaje-roca-derecha" src="images/roca-fragmento-derecho.webp" width="1167" height="1348" alt="" decoding="async" data-paisaje-move="derecha">
+              <img class="paisaje-capa paisaje-reflejos" src="images/reflejos-rocas.webp" width="2172" height="724" alt="" decoding="async">
+              <img class="paisaje-capa paisaje-rocas" src="images/rocas-centrales.webp" width="1942" height="809" alt="" decoding="async">
+              <img class="paisaje-capa paisaje-portatil" src="images/portatil.webp" width="1315" height="1196" alt="" decoding="async" data-paisaje-move="portatil">
+              <img data-paisaje-move="frente-izquierdo" class="paisaje-capa paisaje-primer-izquierdo" src="images/rocas-primer-plano-izquierdo.webp" width="1168" height="1346" alt="" decoding="async">
+              <img data-paisaje-move="frente-derecho" class="paisaje-capa paisaje-primer-derecho" src="images/rocas-primer-plano-derecho.webp" width="1254" height="1254" alt="" decoding="async">
+              <svg class="paisaje-orbita" viewBox="0 0 1600 900" focusable="false"><ellipse cx="705" cy="398" rx="608" ry="168" transform="rotate(-15 705 398)"/><circle class="paisaje-nodo" cx="1018" cy="203" r="13" data-paisaje-move="nodo"/></svg>
+            </div>
+            <p class="paisaje-micro paisaje-micro-izquierda">SITIOS WEB<br>QUE HACEN<br>CRECER IDEAS.</p>
+            <p class="paisaje-micro paisaje-micro-derecha">ESTRATEGIA<br>TECNOLOGÍA<br>DISEÑO<br>PARA TU NEGOCIO.</p>
+            <h1 id="titulo-servicios" class="paisaje-titular"><span class="paisaje-linea"><span class="paisaje-tinta"><span class="paisaje-palabra paisaje-palabra-tu">Tu</span> <span class="paisaje-palabra paisaje-palabra-negocio">negocio</span></span></span> <span class="paisaje-linea"><span class="paisaje-tinta"><span class="paisaje-palabra paisaje-palabra-mejor">mejor</span> <span class="paisaje-palabra paisaje-palabra-pensado">pensado</span></span></span></h1>
+            </div>
+            <div class="paisaje-pie">
+              <a class="paisaje-hagamos" href="#contacto">HAGAMOSLO REAL<span aria-hidden="true"></span></a>
+              <button class="paisaje-pausa" id="paisaje-pausa" type="button" aria-pressed="false" aria-label="Pausar movimiento del hero"><span aria-hidden="true">Ⅱ</span> <span class="paisaje-pausa-texto">PAUSAR</span></button>
+              <a class="paisaje-descubre" href="#negocios-soma"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18"/><path d="M12 20h15m-6-6 6 6-6 6"/></svg><span>DESCUBRE MÁS</span></a>
+            </div>
+          </header>
+          </div>
+          <section class="escaparate" id="negocios-soma" aria-label="Ejemplos de uso por tipo de negocio">
+            <div class="escaparate-scroll">
+              <div class="escaparate-estudio">
+                <div class="escaparate-cabecera"><span>EL NEGOCIO Y LO QUE HAY DETRÁS</span><span>Ejemplos de uso</span></div>
+                <nav class="sectores-control" aria-label="Explora los tipos de negocio" hidden>
+                  <div class="sectores-botones">
+                    <button type="button" data-sector="0" aria-controls="sector-restaurantes" aria-pressed="true"><span aria-hidden="true">01</span> Restaurantes</button>
+                    <button type="button" data-sector="1" aria-controls="sector-moda" aria-pressed="false"><span aria-hidden="true">02</span> Moda</button>
+                    <button type="button" data-sector="2" aria-controls="sector-productos" aria-pressed="false"><span aria-hidden="true">03</span> Productos</button>
+                    <button type="button" data-sector="3" aria-controls="sector-eventos" aria-pressed="false"><span aria-hidden="true">04</span> Eventos</button>
+                  </div>
+                  <span class="sectores-paginacion" aria-hidden="true"><b class="sector-actual">01</b> / 04</span>
+                </nav>
+                <div class="sectores-escenas">
+                  <article class="sector-escena sector-restaurantes" id="sector-restaurantes" aria-labelledby="sector-titulo-restaurantes" data-escena="0">
+                    <figure class="sector-objeto">
+                      <span class="sector-numeral" aria-hidden="true">01</span>
+                      <svg class="sector-orbita" viewBox="0 0 600 480" aria-hidden="true"><ellipse cx="295" cy="260" rx="252" ry="150" transform="rotate(-14 295 260)"/><path d="M36 260h22m-11-11v22m500-140h22m-11-11v22M135 423h165"/><circle cx="536" cy="152" r="5"/></svg>
+                      <img class="sector-imagen" src="images/sectores/soma-restaurante.png" alt="Plato de raviolis sobre cerámica marfil" width="1254" height="1254" loading="lazy" decoding="async">
+                      <span class="sector-estado-imagen" hidden>Imagen no disponible</span>
+                      <figcaption><span>RESTAURANTES</span><span>Del plato a tu menú ↗</span></figcaption>
+                      <svg class="sector-conector" viewBox="0 0 180 100" aria-hidden="true"><path d="M4 80h65a18 18 0 0 0 18-18V25a18 18 0 0 1 18-18h66m-9-6 9 6-9 6"/></svg>
+                    </figure>
+                    <div class="sector-detalle">
+                      <div class="sector-texto"><span class="sector-etiqueta">01 / RESTAURANTES</span><h3 id="sector-titulo-restaurantes">Tu menú.<br><em>A mano.</em></h3><p>Muestra tus platos y precios. Organiza el menú y los pedidos según lo que necesite tu local.</p></div>
+                      <div class="interfaz-ejemplo interfaz-menu" role="group" aria-label="Interfaz ilustrativa de menú, no conectada">
+                        <div class="interfaz-barra"><span class="interfaz-puntos" aria-hidden="true">● ● ●</span><span>Tu restaurante / Menú</span><span aria-hidden="true">↗</span></div>
+                        <div class="interfaz-contenido"><div class="interfaz-heading"><span>La carta</span><small>EJEMPLO</small></div><div class="menu-filtros" aria-hidden="true"><span class="seleccionado">Platos</span><span>Bebidas</span><span>Postres</span></div><div class="menu-plato"><span class="plato-mini" aria-hidden="true"><img src="images/sectores/soma-restaurante.png" alt="" width="1254" height="1254" loading="lazy" decoding="async"></span><span><b>Raviolis de la casa</b><small>Pasta fresca · Salvia · Parmesano</small></span></div><div class="interfaz-pie"><span class="estado-punto">Menú actualizado</span><span>Platos y precios ↗</span></div></div>
+                      </div>
+                      <p class="sector-nota">Interfaz de ejemplo. El alcance se define con cada negocio.</p>
+                    </div>
+                  </article>
+                  <article class="sector-escena sector-moda" id="sector-moda" aria-labelledby="sector-titulo-moda" data-escena="1">
+                    <figure class="sector-objeto">
+                      <span class="sector-numeral" aria-hidden="true">02</span>
+                      <svg class="sector-orbita" viewBox="0 0 600 480" aria-hidden="true"><path d="M135 74H65v70m390-70h70v70M65 330v70h70m390-70v70h-70M290 20v420" stroke-dasharray="4 7"/><circle cx="290" cy="70" r="15"/><path d="M140 432h300"/></svg>
+                      <img class="sector-imagen" src="images/sectores/soma-moda.png" alt="Sudadera marfil con etiqueta burdeos, sin marca" width="1254" height="1254" loading="lazy" decoding="async">
+                      <span class="sector-estado-imagen" hidden>Imagen no disponible</span>
+                      <figcaption><span>MARCAS DE ROPA</span><span>Una colección, en orden ↗</span></figcaption>
+                      <svg class="sector-conector" viewBox="0 0 180 100" aria-hidden="true"><path d="M4 80h65a18 18 0 0 0 18-18V25a18 18 0 0 1 18-18h66m-9-6 9 6-9 6"/></svg>
+                    </figure>
+                    <div class="sector-detalle">
+                      <div class="sector-texto"><span class="sector-etiqueta">02 / MARCAS DE ROPA</span><h3 id="sector-titulo-moda">Tu colección.<br><em>En orden.</em></h3><p>Presenta tus prendas. Mantén organizados los productos, las tallas y las existencias.</p></div>
+                      <div class="interfaz-ejemplo interfaz-moda" role="group" aria-label="Interfaz ilustrativa de catálogo de ropa">
+                        <div class="interfaz-barra"><span class="interfaz-puntos" aria-hidden="true">● ● ●</span><span>Tu marca / Catálogo</span><span aria-hidden="true">↗</span></div>
+                        <div class="interfaz-contenido"><div class="interfaz-heading"><span>La colección</span><small>EJEMPLO</small></div><div class="moda-ficha"><span class="prenda-mini" aria-hidden="true"><img src="images/sectores/soma-moda.png" alt="" width="1254" height="1254" loading="lazy" decoding="async"></span><div><b>Sudadera esencial</b><small>Algodón · Marfil</small><div class="tallas-ejemplo" aria-label="Tallas ilustrativas"><span>S</span><span class="seleccionado">M</span><span>L</span><span>XL</span></div></div></div><div class="interfaz-pie"><span class="estado-punto">Catálogo organizado</span><span>Productos y tallas ↗</span></div></div>
+                      </div>
+                      <p class="sector-nota">Interfaz de ejemplo. El alcance se define con cada negocio.</p>
+                    </div>
+                  </article>
+                  <article class="sector-escena sector-productos" id="sector-productos" aria-labelledby="sector-titulo-productos" data-escena="2">
+                    <figure class="sector-objeto">
+                      <span class="sector-numeral" aria-hidden="true">03</span>
+                      <svg class="sector-orbita" viewBox="0 0 600 480" aria-hidden="true"><path d="m80 345 220-98 220 98-220 99Z M80 345v-64m440 64v-64M300 444v-55M95 116h75m-37-37v75m302 10h75m-37-37v75"/><circle cx="300" cy="345" r="25"/></svg>
+                      <img class="sector-imagen" src="images/sectores/soma-producto.png" alt="Botella marfil con tapón burdeos junto a una caja de envío" width="1254" height="1254" loading="lazy" decoding="async">
+                      <span class="sector-estado-imagen" hidden>Imagen no disponible</span>
+                      <figcaption><span>VENTA DE PRODUCTOS</span><span>Del catálogo al seguimiento ↗</span></figcaption>
+                      <svg class="sector-conector" viewBox="0 0 180 100" aria-hidden="true"><path d="M4 80h65a18 18 0 0 0 18-18V25a18 18 0 0 1 18-18h66m-9-6 9 6-9 6"/></svg>
+                    </figure>
+                    <div class="sector-detalle">
+                      <div class="sector-texto"><span class="sector-etiqueta">03 / VENTA DE PRODUCTOS</span><h3 id="sector-titulo-productos">Lo que vendes.<br><em>Y lo que sigue.</em></h3><p>Una web para tus productos. Un sistema para dar seguimiento a pedidos y clientes.</p></div>
+                      <div class="interfaz-ejemplo interfaz-pedidos" role="group" aria-label="Interfaz ilustrativa de seguimiento de pedidos">
+                        <div class="interfaz-barra"><span class="interfaz-puntos" aria-hidden="true">● ● ●</span><span>Tu negocio / Pedidos</span><span aria-hidden="true">↗</span></div>
+                        <div class="interfaz-contenido"><div class="interfaz-heading"><span>Cada pedido, a la vista.</span><small>EJEMPLO</small></div><div class="pedido-ficha"><span class="pedido-icono" aria-hidden="true">↗</span><span><b>Botella térmica</b><small>Producto de ejemplo</small></span><span class="pedido-badge">En preparación</span></div><ol class="pedido-pasos" aria-label="Etapas ilustrativas"><li class="hecho">Recibido</li><li class="actual">Preparación</li><li>Enviado</li></ol><div class="interfaz-pie"><span class="estado-punto">Seguimiento por estado</span><span>Clientes y pedidos ↗</span></div></div>
+                      </div>
+                      <p class="sector-nota">Interfaz de ejemplo. El alcance se define con cada negocio.</p>
+                    </div>
+                  </article>
+                  <article class="sector-escena sector-eventos" id="sector-eventos" aria-labelledby="sector-titulo-eventos" data-escena="3">
+                    <figure class="sector-objeto">
+                      <span class="sector-numeral" aria-hidden="true">04</span>
+                      <svg class="sector-orbita" viewBox="0 0 600 480" aria-hidden="true"><ellipse cx="290" cy="270" rx="225" ry="156" transform="rotate(18 290 270)" stroke-dasharray="3 7"/><path d="m112 104 8 20 21 8-21 8-8 20-8-20-21-8 21-8Zm373 238v38m-19-19h38"/><circle cx="485" cy="110" r="8"/></svg>
+                      <img class="sector-imagen" src="images/sectores/soma-evento.png" alt="Entrada marfil y pulsera textil burdeos para un evento" width="1254" height="1254" loading="lazy" decoding="async">
+                      <span class="sector-estado-imagen" hidden>Imagen no disponible</span>
+                      <figcaption><span>EVENTOS</span><span>Información y registro ↗</span></figcaption>
+                      <svg class="sector-conector" viewBox="0 0 180 100" aria-hidden="true"><path d="M4 80h65a18 18 0 0 0 18-18V25a18 18 0 0 1 18-18h66m-9-6 9 6-9 6"/></svg>
+                    </figure>
+                    <div class="sector-detalle">
+                      <div class="sector-texto"><span class="sector-etiqueta">04 / EVENTOS</span><h3 id="sector-titulo-eventos">Tu evento.<br><em>Todo aquí.</em></h3><p>Comparte la información e inscripciones. Organiza el registro de quienes van a asistir.</p></div>
+                      <div class="interfaz-ejemplo interfaz-evento" role="group" aria-label="Interfaz ilustrativa de registro a un evento">
+                        <div class="interfaz-barra"><span class="interfaz-puntos" aria-hidden="true">● ● ●</span><span>Tu evento / Registro</span><span aria-hidden="true">↗</span></div>
+                        <div class="interfaz-contenido"><div class="interfaz-heading"><span>Lista de asistentes</span><small>EJEMPLO</small></div><div class="evento-registro"><span class="evento-sello" aria-hidden="true">✓</span><span><b>Inscripción registrada</b><small>Información reunida en un lugar</small></span></div><div class="registro-campos" aria-hidden="true"><span>Nombre</span><span>Correo</span><span>Asistencia</span></div><div class="interfaz-pie"><span class="estado-punto">Registro organizado</span><span>Información y asistentes ↗</span></div></div>
+                      </div>
+                      <p class="sector-nota">Interfaz de ejemplo. El alcance se define con cada negocio.</p>
+                    </div>
+                  </article>
+                </div>
+                <div class="escaparate-pie"><span>Cuatro ejemplos. Tu negocio puede ser distinto.</span><span class="escaparate-desliza" aria-hidden="true">SIGUE EXPLORANDO ↓</span></div>
+                <span class="escaparate-progreso" aria-hidden="true"></span>
+              </div>
+            </div>
+          </section>
+          <div class="direccion-indicacion"><span>¿Por dónde empezamos?</span></div>
+          <nav class="rutas-negocio rutas-de-autor" aria-label="Encuentra tu punto de partida">
+            <a class="ruta-autor ruta-ejemplos" href="#portafolio" data-hover aria-labelledby="ruta-ejemplos-titulo">
+              <span class="ruta-ficha" aria-hidden="true"><span>01 / PROYECTOS</span><span class="ruta-edicion">SELECCIÓN SOMA</span></span>
+              <svg class="ruta-ilustracion ilustracion-ventanas" viewBox="0 0 320 150" aria-hidden="true">
+                <g class="ventana-trasera" fill="#c1ceaa" stroke="#183629" stroke-width="1.4"><rect x="111" y="19" width="163" height="112" rx="3"/><path d="M111 37h163"/><path d="M122 28h2m6 0h2m6 0h2" stroke-linecap="round"/></g>
+                <g class="ventana-frontal"><rect x="42" y="32" width="173" height="108" rx="3" fill="#f8f1df" stroke="#183629" stroke-width="1.4"/><path d="M42 52h173" stroke="#183629" stroke-width="1.4"/><circle cx="53" cy="42" r="2" fill="#183629"/><circle cx="62" cy="42" r="2" fill="#183629"/><path d="M182 42h23M59 120h67" stroke="#183629"/><text x="58" y="108" fill="#183629" font-family="Georgia,serif" font-size="55" letter-spacing="-5">Aa</text><path d="m159 103 30-30m-25 0h25v25" fill="none" stroke="#183629" stroke-width="2"/></g>
+                <g class="ventana-chispa" fill="#ff745a"><path d="m271 45 5 15 15-5-11 12 11 12-15-5-5 16-5-16-15 5 11-12-11-12 15 5Z"/></g>
+              </svg>
+              <span class="ruta-pie"><span class="ruta-titulo" id="ruta-ejemplos-titulo">Quiero ver<br><em>ejemplos</em></span><span class="ruta-flecha" aria-hidden="true">↗</span></span>
+              <span class="ruta-nota" aria-hidden="true">Explora los proyectos.</span>
+            </a>
+            <a class="ruta-autor ruta-sistemas" href="#contacto" data-interes="sistema" data-hover aria-labelledby="ruta-sistemas-titulo">
+              <span class="ruta-ficha" aria-hidden="true"><span>02 / ORGANIZAR</span><span class="ruta-estado"><i></i> SISTEMAS</span></span>
+              <svg class="ruta-ilustracion ilustracion-sistema" viewBox="0 0 320 150" aria-hidden="true">
+                <g fill="none" stroke="#e4edff" stroke-width="1.3"><path class="sistema-conexiones" d="M64 80h60m70 0h55M160 48V22h70v31M160 111v22H91v-25"/><rect x="31" y="57" width="45" height="45" rx="4"/><rect x="124" y="48" width="71" height="64" rx="5" fill="#d5f3a0" stroke="#d5f3a0"/><rect x="245" y="57" width="45" height="45" rx="22"/><path d="M45 73h17m-17 8h17m-17 8h10m204-10 6 6 11-12"/><circle cx="230" cy="57" r="4"/><circle cx="91" cy="103" r="4"/></g>
+                <g class="sistema-nucleo" stroke="#214dc9" stroke-width="2" fill="none"><rect x="143" y="65" width="33" height="30" rx="3"/><path d="M151 65v30m-8-20h33m-16 8h9m-9 5h6"/></g><circle class="sistema-pulso" cx="103" cy="80" r="4" fill="#d5f3a0"/>
+                <path d="M16 17h10m-5-5v10m275 106h10m-5-5v10" stroke="#a4bcff" fill="none"/>
+              </svg>
+              <span class="ruta-pie"><span class="ruta-titulo" id="ruta-sistemas-titulo">Necesito<br><em>un sistema</em></span><span class="ruta-flecha" aria-hidden="true">↗</span></span>
+              <span class="ruta-nota" aria-hidden="true">Cuéntanos qué necesitas organizar.</span>
+            </a>
+            <a class="ruta-autor ruta-restaurantes" href="#menus" data-hover aria-labelledby="ruta-restaurantes-titulo">
+              <span class="ruta-ficha" aria-hidden="true"><span>03 / RESTAURANTES</span><span class="ruta-edicion">A LA CARTA</span></span>
+              <svg class="ruta-ilustracion ilustracion-mesa" viewBox="0 0 320 150" aria-hidden="true">
+                <g fill="none" stroke="#512519" stroke-width="1.4"><ellipse cx="160" cy="78" rx="58" ry="55"/><ellipse cx="160" cy="78" rx="44" ry="41"/><path d="M83 42v80m-9-80v24q9 14 18 0V42m153 0c-18 17-20 40-8 43h8m0-43v80"/><path d="M153 32h14m-14 92h14" opacity=".4"/></g>
+                <g class="mesa-servilleta" transform="rotate(-12 160 78)"><rect x="132" y="44" width="56" height="68" fill="#ffe9c7" stroke="#512519"/><path d="M140 52h40v52h-40Z" fill="none" stroke="#512519" stroke-width=".6"/><text x="151" y="89" font-family="Georgia,serif" font-style="italic" font-size="31" fill="#512519">S</text></g>
+                <path d="m275 25 3 9 10 3-10 3-3 10-3-10-10-3 10-3Z" fill="#512519"/>
+              </svg>
+              <span class="ruta-pie"><span class="ruta-titulo" id="ruta-restaurantes-titulo">Tengo un<br><em>restaurante</em></span><span class="ruta-flecha" aria-hidden="true">↗</span></span>
+              <span class="ruta-nota" aria-hidden="true">Consulta los paquetes.</span>
+            </a>
+          </nav>
+        </div>
+        <div class="servicios-relato">
+          <div class="mesa-servicios" aria-hidden="true">
+            <div class="mesa-registro"><span>SOMA / ESTUDIO</span><span>FIG. 01—03</span></div>
+            <svg class="orbita-editorial" viewBox="0 0 240 240"><use href="images/soma-editorial.svg#registration"/></svg>
+            <div class="folio-servicio folio-servicio--web" data-folio="0"><span class="folio-etiqueta">01 — DISEÑO WEB</span><b class="folio-aa">Aa<span>↗</span></b><span class="folio-rule"></span><span class="folio-pie">Una web que se entienda.</span></div>
+            <div class="folio-servicio folio-servicio--sistema" data-folio="1"><span class="folio-etiqueta">02 — SISTEMAS</span><svg viewBox="0 0 300 170"><g fill="none" stroke="currentColor" stroke-width="2"><path d="M30 45h70v80h80V45h85M100 85h80"/><rect x="10" y="26" width="40" height="38"/><rect x="78" y="105" width="44" height="38"/><rect x="159" y="24" width="44" height="40"/><circle cx="265" cy="45" r="20"/><path d="m251 44 10 10 19-20"/></g></svg><span class="folio-pie">Cada cosa en su lugar.</span></div>
+            <div class="folio-servicio folio-servicio--catalogo" data-folio="2"><span class="folio-etiqueta">03 — CATÁLOGOS</span><div class="catalogo-formas"><i></i><i></i><i></i></div><span class="folio-pie">Tu oferta, organizada.</span></div>
+            <span class="mesa-contador">01 / 03</span><span class="mesa-nota">De la presentación<br>a la operación.</span>
+          </div>
+          <div class="lista_servicios">
+            <article class="servicio" data-service="0">
+              <span class="numero_servicio">01 / Presentar</span><h3>Una web<br>para tu negocio.</h3>
+              <p>Qué ofreces, cómo trabajas y cómo contactarte. Desde una página directa hasta una experiencia visual como esta.</p>
+              <a class="enlace-servicio" href="#contacto" data-interes="web" data-hover>Hablemos de tu web <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="servicio" data-service="1">
+              <span class="numero_servicio">02 / Organizar</span><h3>Menos vueltas.<br>Más orden.</h3>
+              <p>CRMs, paneles y sistemas para tus procesos. Revisamos qué necesitas organizar y qué tareas se pueden automatizar.</p>
+              <a class="enlace-servicio" href="#contacto" data-interes="sistema" data-hover>Cuéntanos cómo trabajas <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="servicio" data-service="2">
+              <span class="numero_servicio">03 / Mostrar</span><h3>Todo lo que<br>tienes para ofrecer.</h3>
+              <p>Productos, servicios o un menú. Catálogos para que tus clientes puedan consultar y encontrar lo que buscan.</p>
+              <a class="enlace-servicio" href="#menus" data-hover>Ver opciones para restaurantes <span aria-hidden="true">↗</span></a>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LAS RUINAS: campo de pasto ps1 al pie de la seccion ──
+           orden de capas (atras -> adelante):
+           lejos(z1) -> columna/enredadera(z2) -> BUSTO(z3) -> cerca(z4)
+           la capa cercana TAPA la base del busto: eso lo planta -->
+      <div class="ruinas_museo" aria-hidden="true" id="ruinasMuseo">
+        <div class="capa_pasto capa_pasto--lejos" data-parallax="0.05"><div class="pasto_tela"></div></div>
+        <div class="columna_ruinas"><img src="columna-rota.png" alt="" loading="lazy"></div>
+        <div class="enredadera enredadera--1"><img src="enredadera-1.png" alt="" loading="lazy"></div>
+        <div class="capa_pasto capa_pasto--medio" data-parallax="0.12"><div class="pasto_tela"></div></div>
+        <div class="busto_ruinas" id="bustoRuinas">
+          <!-- sandwich: pata (z1) → estatua (z2) → frente de lentes (z3).
+               pata y frente comparten canvas: alineados de fabrica -->
+          <div class="pata_ruinas" id="pataRuinas"><img class="lentes_img" src="pata-lentes.png" alt="" loading="lazy"></div>
+          <img class="estatua_ruinas" src="busto-pelon.png" alt="" loading="lazy">
+          <div class="lentes_ruinas" id="lentesRuinas"><img class="lentes_img" src="lentes-solos.png" alt="" loading="lazy"></div>
+        </div>
+        <div class="capa_pasto capa_pasto--cerca" data-parallax="0.22"><div class="pasto_tela"></div></div>
+        <span class="luciernaga luciernaga--1"></span>
+        <span class="luciernaga luciernaga--2"></span>
+        <span class="luciernaga luciernaga--3"></span>
+        <span class="luciernaga luciernaga--4"></span>
+        <span class="luciernaga luciernaga--5"></span>
+        <span class="luciernaga luciernaga--6"></span>
+        <span class="luciernaga luciernaga--7"></span>
+        <span class="luciernaga luciernaga--8"></span>
+      </div>
+    </section>
+
+    <div class="cambio-papel" aria-hidden="true"><svg viewBox="0 0 1440 72" preserveAspectRatio="none"><path d="M0 28 38 32 70 18 119 31 172 12 224 23 268 9 313 26 357 18 404 30 448 14 504 20 545 7 600 21 655 15 707 29 756 14 815 20 852 6 904 21 961 11 1005 26 1050 16 1112 31 1166 18 1213 25 1260 11 1310 24 1370 17 1440 27V72H0Z"/></svg><span>Ahora, míralo funcionando. ↓</span></div>
+    <!-- ─────────── PORTAFOLIO ─────────── -->
+    <section class="seccion" id="portafolio" aria-labelledby="titulo-portafolio" data-chapter="02">
+      <div class="contenedor_seccion">
+        <div class="folio-cabecera"><span class="cejita_seccion">02 / Proyectos seleccionados</span><span class="folio-meta">Webs que puedes probar ↘</span></div>
+        <div class="portafolio-apertura"><h2 class="titulo_seccion" id="titulo-portafolio">Hecho.<br><em>Y en línea.</em></h2><div class="sello-proyectos" aria-hidden="true"><svg viewBox="0 0 240 240"><use href="images/soma-editorial.svg#registration"/></svg><span>02<br><small>PROYECTOS</small></span></div><p class="intro_seccion">Dos negocios distintos.<br>Entra, explora y prueba.</p></div>
+
+        <article class="proyecto proyecto--intensity" id="proyecto-intensity" data-modo="pc">
+          <div class="proyecto-cartela"><span>CASO / 001</span><span>MODA · CATÁLOGO · WEB</span><svg aria-hidden="true" viewBox="0 0 100 100"><use href="images/soma-editorial.svg#spark"/></svg></div>
+          <a class="proyecto-portada" href="https://intensitywear.store" target="_blank" rel="noopener" aria-label="Abrir el sitio de Intensity en una nueva pestaña"><div class="proyecto-imagen"><img src="images/proyecto-intensity.png" width="1280" height="800" loading="lazy" decoding="async" alt="Web de Intensity: titular Viste tu intensidad sobre un fondo rojo oscuro" data-drift="30"></div><span class="portada-accion">Explorar Intensity <span aria-hidden="true">↗</span></span></a>
+          <header class="cabecera_proyecto">
+            <div>
+              <span class="numero_proyecto">P/01</span>
+              <h3 class="nombre_proyecto">Intensity</h3>
+              <p class="desc_proyecto">Marca de ropa · Web + administración de catálogo</p>
+            </div>
+            <div class="controles_proyecto">
+              <div class="toggle_dispositivo" role="group" aria-label="Cambiar vista de Intensity">
+                <button class="opcion_toggle activa" data-modo-btn="pc" data-hover>PC</button>
+                <button class="opcion_toggle" data-modo-btn="movil" data-hover>Móvil</button>
+              </div>
+              <a class="enlace_vivo" href="https://intensitywear.store" target="_blank" rel="noopener" data-hover>Abrir sitio ↗</a>
+            </div>
+          </header>
+          <dl class="caso-resumen">
+            <div><dt>El reto</dt><dd>Presentar una marca y organizar su catálogo.</dd></div>
+            <div><dt>La solución</dt><dd>Una web pública y un sistema para administrar productos sin editar código.</dd></div>
+            <div><dt>Qué puedes explorar</dt><dd>La experiencia pública de la marca. El panel de gestión no forma parte de la demo.</dd></div>
+          </dl>
+          <details class="demo-interactiva"><summary>Probar la web aquí <span aria-hidden="true">+</span></summary><p class="demo-estado" role="status">La demo se carga al abrirla. También puedes usar «Abrir sitio».</p>
+          <div class="marco_navegador">
+            <div class="barra_marco">
+              <span class="punto_marco punto_marco--rojo"></span>
+              <span class="punto_marco punto_marco--azul"></span>
+              <span class="punto_marco"></span>
+              <span class="url_marco">intensitywear.store</span>
+            </div>
+            <div class="pantalla_marco">
+              <iframe title="Intensity en vivo" data-src="https://intensitywear.store" loading="lazy"></iframe>
+            </div>
+          </div></details>
+        </article>
+
+        <article class="proyecto proyecto--delizzia" id="proyecto-delizzia" data-modo="pc">
+          <div class="proyecto-cartela"><span>CASO / 002</span><span>RESTAURANTE · MENÚ · WEB</span><svg aria-hidden="true" viewBox="0 0 100 100"><use href="images/soma-editorial.svg#spark"/></svg></div>
+          <a class="proyecto-portada" href="https://alexnan77.github.io/delizzia/" target="_blank" rel="noopener" aria-label="Abrir la demo de restaurante en una nueva pestaña"><div class="proyecto-imagen"><img src="images/proyecto-delizzia.png" width="1280" height="800" loading="lazy" decoding="async" alt="Demo de restaurante en la URL de Delizzia, actualmente con la identidad POMOZZA y un horno de pizza" data-drift="30"></div><span class="portada-accion">Explorar el restaurante <span aria-hidden="true">↗</span></span></a>
+          <header class="cabecera_proyecto">
+            <div>
+              <span class="numero_proyecto">P/02</span>
+              <h3 class="nombre_proyecto">Delizzia</h3>
+              <p class="desc_proyecto">Restaurante · Web con menú interactivo</p>
+            </div>
+            <div class="controles_proyecto">
+              <div class="toggle_dispositivo" role="group" aria-label="Cambiar vista de Delizzia">
+                <button class="opcion_toggle activa" data-modo-btn="pc" data-hover>PC</button>
+                <button class="opcion_toggle" data-modo-btn="movil" data-hover>Móvil</button>
+              </div>
+              <a class="enlace_vivo" href="https://alexnan77.github.io/delizzia/" target="_blank" rel="noopener" data-hover>Abrir sitio ↗</a>
+            </div>
+          </header>
+          <dl class="caso-resumen">
+            <div><dt>El reto</dt><dd>Llevar la oferta del restaurante a una experiencia digital.</dd></div>
+            <div><dt>La solución</dt><dd>Una web con menú interactivo para explorar lo que ofrece.</dd></div>
+            <div><dt>Qué puedes explorar</dt><dd>La presentación y el menú. El alcance de tu proyecto se define por separado.</dd></div>
+          </dl>
+          <details class="demo-interactiva"><summary>Probar la web aquí <span aria-hidden="true">+</span></summary><p class="demo-estado" role="status">La demo se carga al abrirla. También puedes usar «Abrir sitio».</p>
+          <div class="marco_navegador">
+            <div class="barra_marco">
+              <span class="punto_marco punto_marco--rojo"></span>
+              <span class="punto_marco punto_marco--azul"></span>
+              <span class="punto_marco"></span>
+              <span class="url_marco">delizzia</span>
+            </div>
+            <div class="pantalla_marco">
+              <iframe title="Delizzia en vivo" data-src="https://alexnan77.github.io/delizzia/" loading="lazy"></iframe>
+            </div>
+          </div></details>
+          <p class="nota-demo-identidad">La demo enlazada muestra actualmente la identidad POMOZZA.</p>
+        </article>
+
+        <p class="nota_proyectos">Puedes probar las demos en vista PC o móvil. Cada proyecto tiene su propio alcance.</p>
+        <div class="puente-contacto"><span>Ya viste lo que hacemos.</span><a href="#contacto">Ahora, tu proyecto. <svg aria-hidden="true" viewBox="0 0 230 190"><use href="images/soma-editorial.svg#arrow"/></svg></a></div>
+      </div>
+    </section>
+
+    <!-- Contacto antes de los precios: proyectos generales y restaurantes separados. -->
+    <section class="seccion contacto-temprano" id="contacto" aria-labelledby="titulo-contacto" data-chapter="03">
+      <div class="contacto-trayectoria" aria-hidden="true"><svg viewBox="0 0 1440 650" preserveAspectRatio="xMidYMid slice"><path class="trazo-scroll" pathLength="1" d="M-90 510C90 650 460 630 385 340S-50 130 125 370 970 810 1160 380 650-120 930 60s445 580 640 285" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+      <div class="contenedor_seccion contacto-rejilla">
+        <div>
+          <span class="cejita_seccion">03 / Tu proyecto</span>
+          <h2 class="titulo_seccion" id="titulo-contacto">¿Qué traes<br><em>en mente?</em></h2>
+          <p class="intro_seccion">Cuéntanos qué hace tu negocio y qué necesitas resolver. No hace falta que sepas qué tecnología pedir.</p>
+          <svg class="contacto-flecha" aria-hidden="true" viewBox="0 0 230 190"><use href="images/soma-editorial.svg#arrow"/></svg>
+          <p class="nota-alcance">Webs y sistemas de cualquier sector se cotizan a la medida. Los paquetes que verás más abajo son exclusivos para restaurantes.</p>
+        </div>
+        <div class="consulta-proyecto">
+          <div class="consulta-folio" aria-hidden="true"><span>SOMA / NUEVA CONSULTA</span><span>↗</span></div>
+          <fieldset id="interes-proyecto">
+            <legend>¿Por dónde empezamos?</legend>
+            <label class="opcion-interes"><input type="radio" name="interes" value="web"><span>Una web para mi negocio <b aria-hidden="true">↗</b></span></label>
+            <label class="opcion-interes"><input type="radio" name="interes" value="sistema"><span>Un sistema o catálogo <b aria-hidden="true">↗</b></span></label>
+            <label class="opcion-interes"><input type="radio" name="interes" value="restaurante"><span>La web de mi restaurante <b aria-hidden="true">↗</b></span></label>
+            <label class="opcion-interes"><input type="radio" name="interes" value="idea" checked><span>Tengo otra idea / aún no sé <b aria-hidden="true">↗</b></span></label>
+          </fieldset>
+          <p id="orientacion-proyecto" class="orientacion-proyecto" aria-live="polite">No necesitas saber el nombre técnico. Empieza por contarnos qué quieres resolver.</p>
+          <a id="consulta-whatsapp" class="accion-comercial accion-comercial--oscura" href="https://wa.me/523411786711?text=Hola%20SOMA%2C%20tengo%20una%20idea%20para%20mi%20negocio%20y%20quiero%20ayuda%20para%20aterrizarla." target="_blank" rel="noopener" data-hover>Platicar por WhatsApp <span aria-hidden="true">↗</span></a>
+          <p class="nota-consulta">Abrirás un mensaje que puedes editar. No estás contratando nada todavía.</p>
+          <a class="contacto-telefono" href="tel:+523411786711" data-hover>¿Prefieres llamar? +52 341 178 6711</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="cinta-transicion" aria-hidden="true"><div data-drift-x="100">WEBS <svg viewBox="0 0 120 120"><use href="images/soma-editorial.svg#asterisk"/></svg> SISTEMAS <svg viewBox="0 0 120 120"><use href="images/soma-editorial.svg#asterisk"/></svg> CATÁLOGOS <svg viewBox="0 0 120 120"><use href="images/soma-editorial.svg#asterisk"/></svg> WEBS <svg viewBox="0 0 120 120"><use href="images/soma-editorial.svg#asterisk"/></svg> SISTEMAS</div></div>
+    <section class="seccion oferta-restaurantes" id="menus" aria-labelledby="titulo-paquetes" data-chapter="04">
+      <div class="contenedor_seccion">
+        <div class="folio-cabecera"><span class="cejita_seccion">04 / Para restaurantes</span><span class="folio-meta">Tres opciones · Precios en MXN</span></div>
+        <div class="cabecera-oferta">
+          <h2 class="titulo_seccion" id="titulo-paquetes">La web de<br><em>tu restaurante.</em></h2>
+          <div class="oferta-plato" aria-hidden="true"><svg class="cubiertos" viewBox="0 0 100 160"><use href="images/soma-editorial.svg#fork"/></svg><svg class="plato" viewBox="0 0 200 200"><use href="images/soma-editorial.svg#dish"/></svg><span>A LA<br><i>CARTA.</i></span></div>
+          <p class="intro_seccion">Menú, presentación o un desarrollo específico. Elige según lo que necesitas.</p>
+        </div>
+        <p class="aviso-sector">¿Tu proyecto es de otro sector? <a href="#contacto" data-interes="sistema" data-hover>Lo cotizamos según su alcance →</a></p>
+        <div class="planes-rejilla">
+          <article class="plan-comercial" aria-labelledby="plan-estandar">
+            <span class="plan-enfoque">01 / Presentación y menú</span><svg class="plan-simbolo" aria-hidden="true" viewBox="0 0 100 100"><use href="images/soma-editorial.svg#spark"/></svg>
+            <h3 id="plan-estandar">Estándar</h3>
+            <p class="plan-precio">$5,000–$7,000 <span>MXN</span></p>
+            <p class="plan-perfil">Para poner tu restaurante y su menú al alcance de tus clientes.</p>
+            <ul class="plan-incluye"><li>Menú interactivo.</li><li>Secciones ampliadas para tu contenido.</li><li>Funcionalidades a la medida del alcance acordado.</li></ul>
+            <p class="plan-decision"><strong>Elígelo si</strong> tu prioridad es presentar y facilitar la consulta de tu oferta.</p>
+            <a class="accion-comercial" href="https://wa.me/523411786711?text=Hola%20SOMA%2C%20me%20interesa%20el%20paquete%20Est%C3%A1ndar%20para%20mi%20restaurante.%20Quiero%20confirmar%20alcance%20y%20cotizaci%C3%B3n." target="_blank" rel="noopener" data-hover>Consultar Estándar <span aria-hidden="true">↗</span></a>
+          </article>
+          <article class="plan-comercial plan-comercial--premium" aria-labelledby="plan-premium">
+            <span class="recomendacion-plan">Para una web más personalizada</span>
+            <span class="plan-enfoque">02 / Diseño y personalización</span><svg class="plan-simbolo" aria-hidden="true" viewBox="0 0 120 120"><use href="images/soma-editorial.svg#asterisk"/></svg>
+            <h3 id="plan-premium">Premium</h3>
+            <p class="plan-precio">$10,000–$15,000 <span>MXN</span></p>
+            <p class="plan-perfil">Para darle más identidad a tu restaurante y orientar la experiencia al contacto con clientes.</p>
+            <ul class="plan-incluye"><li>Diseño de alta gama.</li><li>Personalización avanzada.</li><li>Integración enfocada en captación de clientes, definida en la cotización.</li></ul>
+            <p class="plan-decision"><strong>Elígelo si</strong> quieres trabajar la presentación y la captación sin partir de una automatización exclusiva.</p>
+            <a class="accion-comercial accion-comercial--premium" href="https://wa.me/523411786711?text=Hola%20SOMA%2C%20me%20interesa%20Premium%20para%20mi%20restaurante.%20Quiero%20revisar%20la%20personalizaci%C3%B3n%2C%20la%20integraci%C3%B3n%20y%20el%20precio%20final." target="_blank" rel="noopener" data-hover>Hablemos de Premium <span aria-hidden="true">↗</span></a>
+          </article>
+          <article class="plan-comercial" aria-labelledby="plan-enterprise">
+            <span class="plan-enfoque">03 / Desarrollo específico</span><svg class="plan-simbolo" aria-hidden="true" viewBox="0 0 240 240"><use href="images/soma-editorial.svg#registration"/></svg>
+            <h3 id="plan-enterprise">Enterprise</h3>
+            <p class="plan-precio">$20,000+ <span>MXN</span></p>
+            <p class="plan-perfil">Para necesidades que requieren automatización exclusiva y desarrollo específico.</p>
+            <ul class="plan-incluye"><li>Desarrollo 100% a la medida.</li><li>Automatización exclusiva.</li><li>Animación de entrada premium y saludo dinámico inteligente.</li></ul>
+            <p class="plan-decision"><strong>Elígelo si</strong> hay un proceso particular que las otras opciones no cubren.</p>
+            <a class="accion-comercial" href="https://wa.me/523411786711?text=Hola%20SOMA%2C%20quiero%20evaluar%20Enterprise%20para%20mi%20restaurante.%20Necesito%20platicar%20sobre%20una%20automatizaci%C3%B3n%20a%20la%20medida." target="_blank" rel="noopener" data-hover>Revisar Enterprise <span aria-hidden="true">↗</span></a>
+          </article>
+        </div>
+        <p class="condiciones-precio">Rangos de referencia en MXN. El precio final depende del alcance, la personalización y las integraciones acordadas. Confirma en tu cotización impuestos, plazos, revisiones, soporte y costes recurrentes; no se consideran ilimitados ni incluidos por defecto.</p>
+        <aside class="criterio-premium" aria-labelledby="porque-premium">
+          <span class="nota-editorial">¿Te conviene<br>Premium?</span>
+          <div><h3 id="porque-premium">Cuando quieres personalizar más.</h3><p>Premium combina una presentación más personalizada con una integración orientada a captar clientes. La integración se define en la cotización. No garantiza ventas.</p></div>
+        </aside>
+        <details class="detalle-comercial" id="comparacion-paquetes">
+          <summary>Ver diferencias y extras de los paquetes <span aria-hidden="true">+</span></summary>
+          <div class="tabla-desplazable" tabindex="0" role="region" aria-label="Comparación de paquetes; desplaza horizontalmente si es necesario">
+            <table class="tabla-planes"><caption>Compara el enfoque. Las funciones exactas se confirman en la propuesta.</caption><thead><tr><th scope="col">Qué buscas</th><th scope="col">Estándar</th><th scope="col">Premium</th><th scope="col">Enterprise</th></tr></thead><tbody>
+              <tr><th scope="row">Prioridad</th><td>Presentación y menú</td><td>Diseño, personalización y captación</td><td>Automatización y desarrollo específico</td></tr>
+              <tr><th scope="row">Personalización</th><td>Según alcance acordado</td><td>Avanzada</td><td>100% a la medida</td></tr>
+              <tr><th scope="row">Integraciones</th><td>Consultar alcance</td><td>Enfocada en captación; por definir</td><td>Según automatización acordada</td></tr>
+              <tr><th scope="row">Extras anunciados</th><td>Consultar cotización</td><td>Consultar cotización</td><td>Dominio personalizado, 5 QRs de mesa y 1 año de hosting de regalo</td></tr>
+            </tbody></table>
+          </div>
+          <p class="detalle-nota">En Enterprise, confirma la vigencia del dominio, el modelo de los QRs y el coste de renovación del hosting antes de contratar.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ─────────── PROCESO ─────────── -->
+    <section class="seccion" id="proceso" aria-labelledby="titulo-proceso" data-chapter="05">
+      <div class="contenedor_seccion proceso-relato">
+        <div class="proceso-fijo"><span class="cejita_seccion">05 / Paso a paso</span><h2 class="titulo_seccion" id="titulo-proceso">Así<br><em>empezamos.</em></h2><p class="intro_seccion">El alcance, el precio y los tiempos se acuerdan antes de arrancar.</p>
+          <div class="reloj-proceso" aria-hidden="true"><svg viewBox="0 0 240 240"><circle class="reloj-base" cx="120" cy="120" r="108" fill="none" stroke="currentColor"/><circle class="reloj-avance" cx="120" cy="120" r="108" fill="none" stroke="currentColor" stroke-width="3" pathLength="1"/><path d="M120 1v16M239 120h-16M120 239v-16M1 120h16" fill="none" stroke="currentColor"/></svg><span class="proceso-digito">01</span><small>DE 04</small></div>
+        </div>
+        <div class="pasos_proceso">
+          <div class="paso">
+            <span class="numero_paso">/01</span>
+            <h3>Platicamos</h3>
+            <p>Qué hace tu negocio, qué quieres resolver y qué tienes hoy. No hace falta que prepares un documento técnico.</p>
+          </div>
+          <div class="paso">
+            <span class="numero_paso">/02</span>
+            <h3>Cotizamos</h3>
+            <p>Revisamos funciones, entregables, tiempos y precio. El alcance se acuerda antes de empezar, no sobre la marcha.</p>
+          </div>
+          <div class="paso">
+            <span class="numero_paso">/03</span>
+            <h3>Arrancamos</h3>
+            <p>Confirmamos el anticipo y los materiales necesarios. La forma de pago y las revisiones quedan definidas en la propuesta.</p>
+          </div>
+          <div class="paso">
+            <span class="numero_paso">/04</span>
+            <h3>Entregamos</h3>
+            <p>Revisamos lo construido contra el alcance acordado. Aclaramos la entrega, los accesos y las opciones de soporte posteriores.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="seccion" id="dudas" aria-labelledby="titulo-dudas" data-chapter="06">
+      <div class="contenedor_seccion dudas-rejilla">
+        <div class="dudas-encabezado"><span class="cejita_seccion">06 / Las dudas</span><h2 class="titulo_seccion" id="titulo-dudas">Antes de<br><em>contratar.</em></h2><p class="intro_seccion">Precios, tiempos, cambios y lo que incluye cada proyecto.</p><a class="enlace-servicio" href="#contacto" data-hover>Tengo otra pregunta ↗</a><div class="dudas-signo" aria-hidden="true"><span>?</span><svg viewBox="0 0 240 240"><use href="images/soma-editorial.svg#registration"/></svg></div></div>
+        <div class="lista-dudas">
+          <details class="detalle-comercial"><summary>¿Solo trabajan con restaurantes? <span aria-hidden="true">+</span></summary><p>No. Desarrollamos webs, catálogos y sistemas para distintos sectores. Los tres paquetes publicados son para restaurantes; los demás proyectos se cotizan según las funciones y el alcance que necesiten.</p></details>
+          <details class="detalle-comercial"><summary>¿Necesito saber exactamente qué pedir? <span aria-hidden="true">+</span></summary><p>No. Puedes empezar explicando un problema: mostrar tus productos, organizar información o mejorar un proceso. A partir de eso definimos una propuesta; no necesitas elegir tecnologías.</p></details>
+          <details class="detalle-comercial"><summary>¿Qué incluye el precio y por qué es un rango? <span aria-hidden="true">+</span></summary><p>La personalización, las funciones y las integraciones cambian el alcance. La cotización debe detallar el precio final, impuestos, entregables, revisiones, soporte y cualquier coste recurrente. Un paquete no implica funcionalidades ilimitadas.</p></details>
+          <details class="detalle-comercial"><summary>¿Dominio, hosting y mantenimiento están incluidos? <span aria-hidden="true">+</span></summary><p>Enterprise anuncia dominio personalizado, cinco QRs de mesa y un año de hosting de regalo. La vigencia del dominio y las renovaciones deben confirmarse. Para los demás proyectos, dominio, hosting y mantenimiento se revisan en la cotización; no los des por incluidos.</p></details>
+          <details class="detalle-comercial"><summary>¿Cuándo entregan y cómo se paga? <span aria-hidden="true">+</span></summary><p>Depende del alcance y de los materiales necesarios. Antes de arrancar se acuerdan calendario, anticipo, pagos y revisiones. En proyectos menores a $6,000 MXN puedes preguntar por las modalidades de pago flexibles disponibles.</p></details>
+          <details class="detalle-comercial"><summary>¿Podré hacer cambios después? <span aria-hidden="true">+</span></summary><p>Si necesitas editar contenido por tu cuenta, hay que incluir esa función en el alcance. Los cambios posteriores, el mantenimiento y las nuevas funcionalidades se acuerdan por separado, salvo que la propuesta indique que están incluidos.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="seccion complementos-qr" id="complementos" aria-labelledby="titulo-qr">
+      <div class="contenedor_seccion">
+        <span class="cejita_seccion">Opcional · Solo para restaurantes</span>
+        <details class="detalle-comercial catalogo-qr">
+          <summary><svg class="complemento-icono" aria-hidden="true" viewBox="0 0 150 150"><use href="images/soma-editorial.svg#qr-outline"/></svg><span id="titulo-qr">También, <em>en la mesa.</em><small>Soportes QR · Ver 4 opciones y precios</small></span><span aria-hidden="true">+</span></summary>
+          <p class="detalle-nota">Un complemento para tu menú digital. Confirma cantidades, modelo, entrega y coste final al cotizar.</p>
+          <div class="qr-rejilla">
+            <article><span class="qr-precio">$25 <small>MXN</small></span><h3>QR Sticker</h3><p>Vinil adhesivo mate negro. Discreto, para mesas pequeñas.</p></article>
+            <article><span class="qr-precio">$60 <small>MXN</small></span><h3>QR Estándar</h3><p>Acrílico transparente en “L” o triángulo. Una presentación limpia.</p></article>
+            <article><span class="qr-precio">$89 <small>MXN</small></span><h3>QR Premium</h3><p>Acrílico ahumado o espejado, grabado/serigrafía y base metálica dorada.</p></article>
+            <article><span class="qr-precio">$500 <small>MXN</small></span><h3>QR Enterprise</h3><p>Bloque de madera fina adaptado a la temática del restaurante.</p></article>
+          </div>
+          <a class="enlace-servicio" href="https://wa.me/523411786711?text=Hola%20SOMA%2C%20quiero%20consultar%20modelos%2C%20cantidades%20y%20precios%20de%20soportes%20QR%20para%20mi%20restaurante." target="_blank" rel="noopener" data-hover>Consultar soportes QR ↗</a>
+        </details>
+      </div>
+    </section>
+
+    <!-- Cierre breve; el contacto principal vive antes de los paquetes. -->
+    <section class="seccion cierre-comercial" id="cierre">
+      <div class="contenedor_seccion">
+        <div class="folio-cabecera"><span class="cejita_seccion">¿Lo platicamos?</span><a class="volver-inicio" href="#">Volver arriba ↑</a></div>
+        <div class="cierre-titular"><h2 class="titulo_contacto">Cuéntanos<br><em>qué necesitas.</em></h2><svg class="cierre-estrella" aria-hidden="true" viewBox="0 0 120 120"><use href="images/soma-editorial.svg#asterisk"/></svg></div>
+        <p class="intro_seccion">Una web, un sistema o una idea por resolver.<br>Empezamos por escucharte.</p>
+        <div class="acciones_contacto">
+          <a href="https://wa.me/523411786711?text=Hola%20SOMA%2C%20quiero%20cotizar%20un%20proyecto" target="_blank" rel="noopener" class="botonxd botonxd--principal" data-hover>
+            <span class="grano_boton" aria-hidden="true"></span>
+            <span>Escríbenos por WhatsApp</span>
+            <span class="flechita" aria-hidden="true">→</span>
+          </a>
+          <a href="tel:+523411786711" class="botonxd botonxd--fantasma" data-hover>
+            <span class="grano_boton" aria-hidden="true"></span>
+            <span>Llámanos</span>
+          </a>
+        </div>
+        <div class="datos_contacto">
+          <div class="dato_contacto">
+            <span>Teléfono</span>
+            <a href="tel:+523411786711" data-hover>+52 341 178 6711</a>
+          </div>
+          <div class="dato_contacto">
+            <span>Instagram</span>
+            <a href="https://www.instagram.com/somascale/" target="_blank" rel="noopener" data-hover>@somascale</a>
+          </div>
+          <div class="dato_contacto">
+            <span>YouTube</span>
+            <a href="https://youtube.com/@7_wndal1" target="_blank" rel="noopener" data-hover>Nuestro canal</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie_sitio">
+    <div class="footer-superior"><img src="logo-soma.png" alt="SOMA" class="logo_pie"><span class="texto_pie">Diseño &amp; desarrollo web</span><span class="texto_pie">© 2026 SOMA</span></div>
+    <div class="footer-wordmark" aria-hidden="true">S<span>O</span>MA<span class="footer-punto">✳</span></div>
+    <div class="footer-inferior"><span>Webs y sistemas a la medida.</span><a href="#contacto">Hablemos ↗</a></div>
+  </footer>
+
+<script>
+/*
+  ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ┃                                           ┃
+  ┃   javascript principal                    ┃
+  ┃   aqui esta toda la magia                 ┃
+  ┃   three.js + gsap + shaders              ┃
+  ┃                                           ┃
+  ┃   si tocas los shaders y se rompe         ┃
+  ┃   no digas que no te avisé prro :v        ┃
+  ┃                                           ┃
+  ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*/
+
+// ===== detectar si es cel =====
+const es_celular = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+// Código histórico del hero retirado: no carga Three.js ni ejecuta render/recursos.
+// Conservado temporalmente para no mezclar la limpieza histórica con el resto del sitio.
+if (document.getElementById('lienzo_webgl')) {
+// ===== GLSL - ruido simplex =====
+// esto es puro calculo matematico pa generar ruido
+// no lo toques a menos que sepas que haces
+const ruido_glsl = `
+  vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;}
+  vec4 mod289(vec4 x){return x-floor(x*(1./289.))*289.;}
+  vec4 permute(vec4 x){return mod289(((x*34.)+1.)*x);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-.85373472095314*r;}
+  float snoise(vec3 v){
+    const vec2 C=vec2(1./6.,1./3.);const vec4 D=vec4(0.,.5,1.,2.);
+    vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);
+    vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.-g;
+    vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+    vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;
+    i=mod289(i);
+    vec4 p=permute(permute(permute(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+    float n_=.142857142857;vec3 ns=n_*D.wyz-D.xzx;
+    vec4 j=p-49.*floor(p*ns.z*ns.z);
+    vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.*x_);
+    vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;
+    vec4 h=1.-abs(x)-abs(y);
+    vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+    vec4 s0=floor(b0)*2.+1.;vec4 s1=floor(b1)*2.+1.;
+    vec4 sh=-step(h,vec4(0.));
+    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+    vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);
+    vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
+    vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+    vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);
+    m=m*m;return 42.*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }
+`;
+
+
+// ===== shaders del blobxd =====
+// vertex shader - aqui se deforma la geometria
+const vertex_del_blob = ruido_glsl + `
+  uniform float uTime;uniform float uSpeed;uniform float uNoiseDensity;uniform float uNoiseStrength;uniform float uMorph;
+  varying vec3 vNormal;varying vec3 vViewDir;varying float vDisplacement;varying vec3 vPosition;
+  const float R=2.0;
+  vec3 toSphere(vec3 d){return d*R;}
+  vec3 toCube(vec3 d){vec3 a=abs(d);float m=max(a.x,max(a.y,a.z));return d*(R/max(m,1e-4));}
+  vec3 toOcta(vec3 d){float l=abs(d.x)+abs(d.y)+abs(d.z);return d*(R/max(l,1e-4));}
+  void main(){
+    vec3 dir=normalize(position);
+    vec3 cube=toCube(dir);vec3 sphere=toSphere(dir);vec3 octa=toOcta(dir);
+    float s1=smoothstep(0.,1.,clamp(uMorph,0.,1.));float s2=smoothstep(0.,1.,clamp(uMorph-1.,0.,1.));
+    vec3 morphed=mix(cube,sphere,s1);morphed=mix(morphed,octa,s2);
+    vec3 mN=normalize(morphed);float t=uTime*uSpeed;
+    float d1=snoise(morphed*uNoiseDensity+t)*uNoiseStrength;
+    float d2=snoise(morphed*uNoiseDensity*2.2+t*1.4)*uNoiseStrength*0.3;
+    float distortion=d1+d2;vDisplacement=distortion;vPosition=morphed;
+    vec3 pos=morphed+(mN*distortion);vNormal=mN;
+    vec4 wp=modelMatrix*vec4(pos,1.);vViewDir=normalize(cameraPosition-wp.xyz);
+    gl_Position=projectionMatrix*viewMatrix*wp;
+  }
+`;
+
+// fragment shader - aqui se pinta el color
+const fragment_del_blob = `
+  varying vec3 vNormal;varying vec3 vViewDir;varying float vDisplacement;varying vec3 vPosition;
+  uniform vec3 uColor1;uniform vec3 uColor2;uniform vec3 uColor3;uniform float uTime;
+  void main(){
+    float intensity=dot(vNormal,normalize(vec3(0.3,1.,0.8)));intensity=smoothstep(-0.2,1.4,intensity);
+    vec3 col=mix(uColor1,uColor2,intensity);col=mix(col,uColor3,smoothstep(-0.05,0.18,vDisplacement));
+    float fresnel=pow(1.-max(dot(vNormal,vViewDir),0.),4.);
+    vec3 rimCol=mix(vec3(0.2,0.4,1.),vec3(0.9,0.2,0.6),fresnel*0.7+sin(uTime*0.5)*0.15);
+    col+=rimCol*fresnel*0.5;
+    vec3 lDir=normalize(vec3(1.,1.5,2.));vec3 hV=normalize(lDir+vViewDir);
+    float spec=pow(max(dot(vNormal,hV),0.),48.);col+=vec3(spec*0.3);
+    gl_FragColor=vec4(col,1.);
+  }
+`;
+
+
+// ===== shaders de particulas / polvo / nebula / estrellas =====
+const vertex_particulas = ruido_glsl + `
+  attribute float aSize;attribute float aPhase;attribute float aSpeed;
+  uniform float uTime;uniform vec2 uMouse;uniform float uWaveIntensity;
+  varying float vAlpha;varying float vColorMix;varying float vDist;
+  void main(){
+    vec3 pos=position;
+    float wave1=sin(pos.x*0.8+uTime*0.6+aPhase*6.28)*1.5;float wave2=cos(pos.z*0.6+uTime*0.4+aPhase*3.14)*1.2;
+    float wave3=sin((pos.x+pos.z)*0.4+uTime*0.3)*0.8;float noiseDisp=snoise(vec3(pos.xz*0.15,uTime*0.2+aPhase))*3.0;
+    pos.y+=(wave1+wave2+wave3+noiseDisp)*uWaveIntensity;
+    vec2 mouseWorld=uMouse*vec2(35.0,20.0);float distToMouse=length(pos.xz-mouseWorld);
+    float ripple=sin(distToMouse*1.5-uTime*3.0)*exp(-distToMouse*0.08)*4.0;pos.y+=ripple*uWaveIntensity;
+    float breathe=1.0+sin(uTime*0.5+aPhase*2.0)*0.02;pos*=breathe;
+    vec4 mv=modelViewMatrix*vec4(pos,1.0);float size=aSize*(250.0/-mv.z);
+    float mouseSizeBoost=smoothstep(15.0,0.0,distToMouse)*2.0;size+=mouseSizeBoost;
+    gl_PointSize=clamp(size,0.5,12.0);gl_Position=projectionMatrix*mv;
+    float depth=smoothstep(-60.0,-5.0,mv.z);vAlpha=depth*(0.3+sin(uTime*aSpeed+aPhase*6.28)*0.15);
+    vColorMix=(pos.y+5.0)/10.0;vDist=distToMouse;
+  }
+`;
+const fragment_particulas = `
+  varying float vAlpha;varying float vColorMix;varying float vDist;
+  uniform vec3 uColorA;uniform vec3 uColorB;uniform vec3 uColorC;
+  void main(){
+    float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;
+    float strength=1.0-smoothstep(0.0,0.5,d);strength=pow(strength,2.0);
+    vec3 col=mix(uColorA,uColorB,clamp(vColorMix,0.0,1.0));
+    col=mix(col,uColorC,smoothstep(8.0,0.0,vDist)*0.6);
+    gl_FragColor=vec4(col,strength*vAlpha);
+  }
+`;
+
+const vertex_polvo = `
+  attribute float aSize;attribute float aPhase;uniform float uTime;varying float vAlpha;
+  void main(){
+    vec3 pos=position;pos.x+=sin(uTime*0.2+aPhase*6.28)*1.5;pos.y+=cos(uTime*0.15+aPhase*4.0)*1.0;pos.z+=sin(uTime*0.1+aPhase*3.0)*0.8;
+    vec4 mv=modelViewMatrix*vec4(pos,1.0);gl_PointSize=clamp(aSize*(180.0/-mv.z),0.3,6.0);
+    gl_Position=projectionMatrix*mv;vAlpha=smoothstep(-80.0,-2.0,mv.z)*0.45;
+  }
+`;
+const fragment_polvo = `
+  varying float vAlpha;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;
+  float s=pow(1.0-d*2.0,3.0);gl_FragColor=vec4(vec3(0.6,0.75,1.0),s*vAlpha);}
+`;
+
+const vertex_nebula = `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
+const fragment_nebula = ruido_glsl + `
+  varying vec2 vUv;uniform float uTime;uniform float uOpacity;uniform vec3 uColor1;uniform vec3 uColor2;
+  void main(){vec2 uv=vUv;float n1=snoise(vec3(uv*2.0,uTime*0.05))*0.5+0.5;float n2=snoise(vec3(uv*4.0+10.0,uTime*0.08))*0.5+0.5;
+  float n3=snoise(vec3(uv*8.0+20.0,uTime*0.03))*0.5+0.5;float combined=n1*0.5+n2*0.3+n3*0.2;combined=pow(combined,1.8);
+  float dist=length(uv-vec2(0.5));float radial=1.0-smoothstep(0.0,0.7,dist);vec3 col=mix(uColor1,uColor2,n2);
+  gl_FragColor=vec4(col,combined*radial*uOpacity);}
+`;
+
+const vertex_estrellas = `
+  attribute float aSize;attribute float aPhase;attribute float aBrightness;uniform float uTime;varying float vAlpha;varying float vBright;
+  void main(){vec3 pos=position;vec4 mv=modelViewMatrix*vec4(pos,1.0);
+  float twinkle=sin(uTime*(1.0+aPhase*2.0)+aPhase*30.0)*0.5+0.5;
+  gl_PointSize=clamp(aSize*twinkle*(120.0/-mv.z),0.2,4.0);gl_Position=projectionMatrix*mv;
+  vAlpha=smoothstep(-100.0,-5.0,mv.z)*0.7*twinkle;vBright=aBrightness;}
+`;
+const fragment_estrellas = `
+  varying float vAlpha;varying float vBright;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;
+  float s=pow(1.0-d*2.0,4.0);vec3 col=mix(vec3(0.7,0.8,1.0),vec3(1.0,0.9,0.8),vBright);gl_FragColor=vec4(col,s*vAlpha);}
+`;
+
+
+// ===== armando la escena de three.js =====
+const lienzo = document.getElementById('lienzo_webgl');
+const escena = new THREE.Scene();
+const camara = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 200);
+camara.position.z = 6.5;
+
+const renderizador = new THREE.WebGLRenderer({canvas: lienzo, alpha:true, antialias:false, powerPreference:es_celular?'low-power':'high-performance'});
+
+// ===== RESOLUCION INTERNA FIJA (el fix del ps1) =====
+// el look ps1 vive en la resolucion interna, NO en la del monitor.
+// antes renderizabamos a resolucion nativa y el dither desaparecia en
+// pantallas grandes. ahora renderizamos SIEMPRE a ~540p y el canvas se
+// estira a pantalla completa (css 100vw/100vh + image-rendering:pixelated):
+// el efecto se ve IGUAL en un cel que en un monitor 4k, y de paso la
+// pagina corre mucho mas ligera en pantallas grandes.
+const ALTO_INTERNO = 540;
+function medidas_render(){
+  const alto = Math.min(ALTO_INTERNO, window.innerHeight || ALTO_INTERNO);
+  const ancho = Math.max(1, Math.round(alto * (window.innerWidth/window.innerHeight)));
+  return {ancho, alto};
+}
+renderizador.setPixelRatio(1);
+const medidas_iniciales = medidas_render();
+renderizador.setSize(medidas_iniciales.ancho, medidas_iniciales.alto, false);
+
+
+// ===== EL BLOBXD =====
+// la bolita deforme principal que se ve al centro
+const geometria_blob = new THREE.IcosahedronGeometry(2, es_celular?42:64);
+const material_blob = new THREE.ShaderMaterial({
+  vertexShader: vertex_del_blob,
+  fragmentShader: fragment_del_blob,
+  uniforms:{
+    uTime:{value:0},
+    uSpeed:{value:0.32},
+    uNoiseDensity:{value:1.0},
+    uNoiseStrength:{value:0.15},
+    uMorph:{value:1.0},
+    // uColor2 casi blanco: en difference, |blanco - rojo #FF3366| = teal
+    // → cuando el blob cruza "real." la palabra FLASHEA a verde-cian.
+    // con el azul anterior el resultado era magenta ≈ rojo y no se notaba
+    uColor1:{value:new THREE.Color('#0a1eff')},
+    uColor2:{value:new THREE.Color('#e8f1ff')},
+    uColor3:{value:new THREE.Color('#c44dff')}
+  }
+});
+const blobxd = new THREE.Mesh(geometria_blob, material_blob);
+blobxd.scale.setScalar(0.01);
+blobxd.visible = false;
+// corrido a la izquierda/abajo para plantarse DETRAS de "real." y que
+// el dialogo blob<->texto de verdad suceda; en layouts angostos el
+// centro ya cruza el texto y va centrado.
+// OJO: se decide por ASPECT REAL, no por user-agent — el modo "sitio
+// de escritorio" del cel miente en el UA y dejaba el blob corrido a la
+// izquierda en una pantalla vertical. aspect no miente nunca.
+function colocar_blob(){
+  if(camara.aspect > 1.05){ blobxd.position.set(-0.85, -0.35, 0); }
+  else { blobxd.position.set(0, 0, 0); }
+}
+colocar_blob();
+escena.add(blobxd);
+
+
+// ===== PARTICULAS - la malla de puntitos =====
+const CUADRICULA = es_celular ? 55 : 90;
+const TOTAL_PARTICULAS = CUADRICULA * CUADRICULA;
+const posiciones_particulas = new Float32Array(TOTAL_PARTICULAS*3);
+const tamanos_particulas = new Float32Array(TOTAL_PARTICULAS);
+const fases_particulas = new Float32Array(TOTAL_PARTICULAS);
+const velocidades_particulas = new Float32Array(TOTAL_PARTICULAS);
+
+const ANCHO_X = es_celular ? 50 : 70;
+const ANCHO_Z = es_celular ? 40 : 55;
+
+for(let i=0;i<CUADRICULA;i++){
+  for(let j=0;j<CUADRICULA;j++){
+    const idx = i*CUADRICULA+j;
+    posiciones_particulas[idx*3] = ((i/(CUADRICULA-1))-0.5)*ANCHO_X + (Math.random()-0.5)*0.8;
+    posiciones_particulas[idx*3+1] = -3+Math.random()*0.5;
+     posiciones_particulas[idx*3+2] = ((j/(CUADRICULA-1))-0.5)*ANCHO_Z + (Math.random()-0.5)*0.8-20;
+    tamanos_particulas[idx] = Math.random()*2+0.8;
+    fases_particulas[idx] = Math.random();
+    velocidades_particulas[idx] = Math.random()*0.5+0.3;
+  }
+}
+
+const geo_particulas = new THREE.BufferGeometry();
+geo_particulas.setAttribute('position', new THREE.BufferAttribute(posiciones_particulas,3));
+geo_particulas.setAttribute('aSize', new THREE.BufferAttribute(tamanos_particulas,1));
+geo_particulas.setAttribute('aPhase', new THREE.BufferAttribute(fases_particulas,1));
+geo_particulas.setAttribute('aSpeed', new THREE.BufferAttribute(velocidades_particulas,1));
+
+const mat_particulas = new THREE.ShaderMaterial({
+  vertexShader: vertex_particulas,
+  fragmentShader: fragment_particulas,
+  uniforms:{
+    uTime:{value:0},
+    uMouse:{value:new THREE.Vector2(0,0)},
+    uWaveIntensity:{value:0},
+    uColorA:{value:new THREE.Color('#1a2f80')},
+    uColorB:{value:new THREE.Color('#4a7aff')},
+    uColorC:{value:new THREE.Color('#a855f7')}
+  },
+  transparent:true,
+  depthWrite:false,
+  blending:THREE.AdditiveBlending
+});
+
+const malla_particulas = new THREE.Points(geo_particulas, mat_particulas);
+escena.add(malla_particulas);
+
+
+// ===== POLVO COSMICO =====
+const CANTIDAD_POLVO = es_celular ? 300 : 700;
+const pos_polvo = new Float32Array(CANTIDAD_POLVO*3);
+const tam_polvo = new Float32Array(CANTIDAD_POLVO);
+const fases_polvo = new Float32Array(CANTIDAD_POLVO);
+
+for(let i=0;i<CANTIDAD_POLVO;i++){
+  const theta = Math.random()*Math.PI*2;
+  const phi = Math.acos(2*Math.random()-1);
+  const r = 5+Math.random()*40;
+  pos_polvo[i*3] = r*Math.sin(phi)*Math.cos(theta);
+  pos_polvo[i*3+1] = r*Math.sin(phi)*Math.sin(theta)*0.6;
+  pos_polvo[i*3+2] = r*Math.cos(phi)-10;
+  tam_polvo[i] = Math.random()*1.8+0.3;
+   fases_polvo[i] = Math.random();
+}
+
+const geo_polvo = new THREE.BufferGeometry();
+geo_polvo.setAttribute('position', new THREE.BufferAttribute(pos_polvo,3));
+geo_polvo.setAttribute('aSize', new THREE.BufferAttribute(tam_polvo,1));
+geo_polvo.setAttribute('aPhase', new THREE.BufferAttribute(fases_polvo,1));
+
+const mat_polvo = new THREE.ShaderMaterial({
+  vertexShader: vertex_polvo,
+  fragmentShader: fragment_polvo,
+  uniforms:{uTime:{value:0}},
+  transparent:true,
+  depthWrite:false,
+  blending:THREE.AdditiveBlending
+});
+
+const polvito = new THREE.Points(geo_polvo, mat_polvo);
+escena.add(polvito);
+
+
+// ===== NEBULA =====
+const geo_nebula = new THREE.PlaneGeometry(60,40,1,1);
+
+const mat_nebula_1 = new THREE.ShaderMaterial({
+  vertexShader: vertex_nebula,
+  fragmentShader: fragment_nebula,
+  uniforms:{
+    uTime:{value:0},
+    uOpacity:{value:0.14},
+    uColor1:{value:new THREE.Color('#0a1040')},
+    uColor2:{value:new THREE.Color('#1a0a3a')}
+  },
+  transparent:true,depthWrite:false,
+  blending:THREE.AdditiveBlending,side:THREE.DoubleSide
+});
+
+const nebula_1 = new THREE.Mesh(geo_nebula, mat_nebula_1);
+nebula_1.position.z = -25;
+escena.add(nebula_1);
+
+const mat_nebula_2 = new THREE.ShaderMaterial({
+  vertexShader: vertex_nebula,
+  fragmentShader: fragment_nebula,
+  uniforms:{
+    uTime:{value:0},
+    uOpacity:{value:0.09},
+    uColor1:{value:new THREE.Color('#050830')},
+    uColor2:{value:new THREE.Color('#200a30')}
+  },
+  transparent:true,depthWrite:false,
+  blending:THREE.AdditiveBlending,side:THREE.DoubleSide
+});
+
+const nebula_2 = new THREE.Mesh(geo_nebula.clone(), mat_nebula_2);
+nebula_2.position.z = -15;
+nebula_2.rotation.z = 0.4;
+nebula_2.scale.set(1.4,1.2,1);
+escena.add(nebula_2);
+
+
+// ===== ESTRELLAS =====
+const CANTIDAD_ESTRELLAS = es_celular ? 400 : 1200;
+const pos_estrellas = new Float32Array(CANTIDAD_ESTRELLAS*3);
+const tam_estrellas = new Float32Array(CANTIDAD_ESTRELLAS);
+const fases_estrellas = new Float32Array(CANTIDAD_ESTRELLAS);
+const brillo_estrellas = new Float32Array(CANTIDAD_ESTRELLAS);
+
+for(let i=0;i<CANTIDAD_ESTRELLAS;i++){
+  const theta = Math.random()*Math.PI*2;
+  const phi = Math.acos(2*Math.random()-1);
+  const r = 20+Math.random()*70;
+  pos_estrellas[i*3] = r*Math.sin(phi)*Math.cos(theta);
+  pos_estrellas[i*3+1] = r*Math.sin(phi)*Math.sin(theta)*0.5;
+  pos_estrellas[i*3+2] = -Math.abs(r*Math.cos(phi))-5;
+  tam_estrellas[i] = Math.random()*2+0.5;
+  fases_estrellas[i] = Math.random();
+  brillo_estrellas[i] = Math.random();
+}
+
+const geo_estrellas = new THREE.BufferGeometry();
+geo_estrellas.setAttribute('position', new THREE.BufferAttribute(pos_estrellas,3));
+geo_estrellas.setAttribute('aSize', new THREE.BufferAttribute(tam_estrellas,1));
+geo_estrellas.setAttribute('aPhase', new THREE.BufferAttribute(fases_estrellas,1));
+geo_estrellas.setAttribute('aBrightness', new THREE.BufferAttribute(brillo_estrellas,1));
+
+const mat_estrellas = new THREE.ShaderMaterial({
+  vertexShader: vertex_estrellas,
+  fragmentShader: fragment_estrellas,
+  uniforms:{uTime:{value:0}},
+  transparent:true,depthWrite:false,
+  blending:THREE.AdditiveBlending
+});
+
+const estrellitas = new THREE.Points(geo_estrellas, mat_estrellas);
+escena.add(estrellitas);
+
+
+// ===== calcular escala del blob =====
+const RADIO_BLOB = 2;
+const LLENADO = 0.58;
+const ESCALA_MIN = 0.52;
+const ESCALA_MAX = 1.6;
+
+function alto_visible(d, cam){ return 2*Math.tan(cam.fov*Math.PI/360)*Math.abs(d-cam.position.z); }
+function ancho_visible(d, cam){ return alto_visible(d,cam)*cam.aspect; }
+
+let escala_objetivo = 1;
+
+function calcular_escala(){
+  const h = alto_visible(0, camara);
+  const w = ancho_visible(0, camara);
+  // en pantallas anchas el blob se moria de chiquito: cuando hay aire
+  // horizontal de sobra (aspect > 1.35) le damos mas presencia
+  const llenado = camara.aspect > 1.35 ? 0.70 : LLENADO;
+  let s = (Math.min(w,h)*llenado*0.92)/(RADIO_BLOB*2);
+  escala_objetivo = Math.min(Math.max(s, ESCALA_MIN), ESCALA_MAX);
+}
+calcular_escala();
+
+
+// ===== POST PROCESADO - efecto ps1 =====
+// esto pixelea todo y le pone las lineas de scanline
+const shader_ps1 = {
+  uniforms:{
+    tDiffuse:{value:null},
+    uResolution:{value:new THREE.Vector2(window.innerWidth,window.innerHeight)},
+    uPixelSize:{value:2.0},
+    uRGBIntensity:{value:0.7},
+    uScanlineIntensity:{value:0.08},
+    uTime:{value:0},
+    uColorDepth:{value:32.0},
+    uWarpAmount:{value:0.0}
+  },
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform sampler2D tDiffuse;uniform vec2 uResolution;uniform float uPixelSize;uniform float uRGBIntensity;uniform float uScanlineIntensity;uniform float uTime;uniform float uColorDepth;uniform float uWarpAmount;varying vec2 vUv;
+vec2 crtWarp(vec2 uv){vec2 c=uv-0.5;float d=dot(c,c);c*=1.0+d*uWarpAmount;return c+0.5;}
+void main(){vec2 uv=crtWarp(vUv);if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){gl_FragColor=vec4(0,0,0,1);return;}
+vec2 pg=uResolution/uPixelSize;vec2 puv=floor(uv*pg)/pg;vec4 color=texture2D(tDiffuse,puv);
+vec2 fc=uv*uResolution;float sp=mod(fc.x,3.0);vec3 rgbM=vec3(1.0);
+if(uRGBIntensity>0.0){if(sp<1.0)rgbM=vec3(1.0,1.0-uRGBIntensity*0.6,1.0-uRGBIntensity*0.6);else if(sp<2.0)rgbM=vec3(1.0-uRGBIntensity*0.6,1.0,1.0-uRGBIntensity*0.6);else rgbM=vec3(1.0-uRGBIntensity*0.6,1.0-uRGBIntensity*0.6,1.0);}
+color.rgb*=rgbM*(1.0+uRGBIntensity*0.35);
+float sl=sin(fc.y*3.14159)*0.5+0.5;color.rgb*=1.0-(pow(sl,1.5)*uScanlineIntensity);
+color.rgb=floor(color.rgb*uColorDepth)/uColorDepth;
+float n=fract(sin(dot(puv+uTime*0.001,vec2(12.9898,78.233)))*43758.5453);color.rgb+=(n-0.5)*0.015;
+vec4 bl=texture2D(tDiffuse,puv+vec2(1.0/uResolution.x,0.0));color.rgb=mix(color.rgb,bl.rgb,0.03);
+gl_FragColor=color;}`
+};
+
+const compositor = new THREE.EffectComposer(renderizador);
+compositor.setSize(medidas_iniciales.ancho, medidas_iniciales.alto);
+compositor.addPass(new THREE.RenderPass(escena, camara));
+const paso_ps1 = new THREE.ShaderPass(shader_ps1);
+// la resolucion del shader es la INTERNA (540p), no la del monitor:
+// asi scanlines, dither y pixeleo son identicos en cualquier pantalla
+paso_ps1.uniforms.uResolution.value.set(medidas_iniciales.ancho, medidas_iniciales.alto);
+compositor.addPass(paso_ps1);
+
+
+// ===== ANIMACION DE ENTRADA - timeline =====
+const coords_mouse = new THREE.Vector2();
+let intro_termino = false;
+
+const iniciar_intro_soma = () => {
+  const prefiere_sin_movimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  calcular_escala();
+
+  // si el usuario no quiere animaciones le damos todo de golpe
+  if(prefiere_sin_movimiento){
+    blobxd.scale.setScalar(escala_objetivo);
+    blobxd.visible = true;
+    material_blob.uniforms.uMorph.value = 1;
+    material_blob.uniforms.uNoiseStrength.value = 0.15;
+    mat_particulas.uniforms.uWaveIntensity.value = 1;
+    gsap.set("#capa_intro",{autoAlpha:0});
+    gsap.set("#txtCargando",{autoAlpha:0});
+    gsap.set("#linea_intro",{autoAlpha:0});
+    document.body.classList.add('loaded');
+    intro_termino = true;
+    gsap.set("#navPrincipal",{opacity:1,y:0});
+    gsap.set("#indicadorScroll",{opacity:1});
+    gsap.set(".barrita_roja",{opacity:1});
+    document.getElementById('contenidoHero').classList.add('ya_se_ve');
+    return;
+  }
+
+  // timeline de la intro
+  const tl = gsap.timeline({onComplete:()=>{ intro_termino = true; }});
+
+  blobxd.visible = true;
+  blobxd.scale.setScalar(0.001);
+  material_blob.uniforms.uMorph.value = 0;
+  material_blob.uniforms.uNoiseStrength.value = 0;
+  mat_particulas.uniforms.uWaveIntensity.value = 0;
+
+  gsap.set("#indicadorScroll",{opacity:0, y:20});
+  gsap.set("#navPrincipal",{opacity:0, y:-30});
+  gsap.set("#linea_intro",{width:0, opacity:1});
+  gsap.set(".barrita_roja",{opacity:0});
+
+  tl.to("#txtCargando",{opacity:1, duration:0.4, ease:"power2.out"}, 0);
+  tl.to("#linea_intro",{width:"40vw", duration:0.8, ease:"power4.inOut"}, 0.2);
+  tl.to("#txtCargando",{opacity:0, letterSpacing:"0.6em", duration:0.35, ease:"power3.in"}, 0.9);
+  tl.to("#linea_intro",{width:"110vw", height:"4px", duration:0.4, ease:"power4.in"}, 1.1);
+  tl.to("#capa_intro",{autoAlpha:0, duration:0.6, ease:"power2.out"}, 1.4);
+  tl.to("#linea_intro",{opacity:0, height:"80vh", duration:0.5, ease:"power2.out"}, 1.4);
+
+  // aqui aparece el blob
+  tl.to(blobxd.scale,{x:escala_objetivo, y:escala_objetivo, z:escala_objetivo, duration:1.8, ease:"expo.out"}, 1.5);
+  tl.to(material_blob.uniforms.uMorph,{value:1, duration:1.0, ease:"power2.inOut"}, 1.5);
+  tl.to(material_blob.uniforms.uNoiseStrength,{value:0.15, duration:1.4, ease:"power2.out"}, 1.8);
+  tl.to(mat_particulas.uniforms.uWaveIntensity,{value:1.0, duration:2.0, ease:"power2.out"}, 1.6);
+
+  tl.call(()=>{ document.body.classList.add('loaded'); }, null, 2.8);
+  tl.to("#navPrincipal",{opacity:1, y:0, duration:1.0, ease:"power3.out"}, 2.9);
+  tl.call(()=>{
+    document.getElementById('contenidoHero').classList.add('ya_se_ve');
+    gsap.set(".barrita_roja",{opacity:1});
+  }, null, 3.0);
+  tl.to("#indicadorScroll",{opacity:1, y:0, duration:1, ease:"power2.out"}, 3.6);
+};
+// No esperar a imágenes ausentes ni a todos los recursos de la página.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', iniciar_intro_soma, {once:true});
+} else {
+  iniciar_intro_soma();
+}
+
+
+// ===== INTERACCION CON EL MOUSE =====
+const al_mover = (cx, cy) => {
+  coords_mouse.x = (cx/window.innerWidth)*2-1;
+  coords_mouse.y = -(cy/window.innerHeight)*2+1;
+  mat_particulas.uniforms.uMouse.value.set(coords_mouse.x, coords_mouse.y);
+
+  if(!es_celular){
+    gsap.to(blobxd.rotation,{
+      x: coords_mouse.y*0.3,
+      y: coords_mouse.x*0.3,
+      duration:2,
+      ease:"power2.out",
+      overwrite:'auto'
+    });
+  }
+};
+
+// cuando le picas se hace spiky
+const al_picar = () => {
+  if(!intro_termino) return;
+  gsap.to(material_blob.uniforms.uNoiseStrength,{
+    value:0.4, duration:0.4, ease:"power2.out",
+    yoyo:true, repeat:1
+  });
+};
+
+window.addEventListener('mousemove', e => al_mover(e.clientX, e.clientY));
+window.addEventListener('touchmove', e => { al_mover(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+window.addEventListener('mousedown', al_picar);
+window.addEventListener('touchstart', al_picar, {passive:true});
+
+
+// ===== RENDER LOOP =====
+// aqui corre todo en cada frame
+const relojito = new THREE.Clock();
+
+// ===== micro-parallax del contenido =====
+// el texto deriva sutilmente OPUESTO al mouse (el blob va hacia el mouse)
+// via css vars --prx/--pry que viven dentro de los keyframes jitter
+const el_contenido_hero = document.getElementById('contenidoHero');
+const parallax = {x:0, y:0};
+
+// pa interpolar suavecito
+const interpolar = (a,b,n) => a+(b-a)*n;
+
+// pausar el render cuando el hero sale del viewport:
+// el blob + postproceso NO queman gpu mientras lees las secciones de abajo
+let hero_visible = true;
+const observador_hero = new IntersectionObserver((entradas)=>{
+  hero_visible = entradas[0].isIntersecting;
+},{threshold:0});
+observador_hero.observe(document.querySelector('.heroxd'));
+
+function ciclo_render(){
+  // El cursor tiene su propio controlador ligero en js/cursor.js.
+
+  // hero fuera de pantalla → nos saltamos three.js por completo
+  if(!hero_visible && intro_termino){
+    requestAnimationFrame(ciclo_render);
+    return;
+  }
+
+  // micro-parallax (solo desktop): lerp suave hacia el objetivo
+  if(!es_celular){
+    parallax.x = interpolar(parallax.x, coords_mouse.x * -9, 0.05);
+    parallax.y = interpolar(parallax.y, coords_mouse.y * 6, 0.05);
+    el_contenido_hero.style.setProperty('--prx', parallax.x.toFixed(2) + 'px');
+    el_contenido_hero.style.setProperty('--pry', parallax.y.toFixed(2) + 'px');
+  }
+
+  const t = relojito.getElapsedTime();
+
+  // actualizar tiempos
+  material_blob.uniforms.uTime.value = t;
+  mat_particulas.uniforms.uTime.value = t;
+  mat_polvo.uniforms.uTime.value = t;
+  mat_estrellas.uniforms.uTime.value = t;
+  mat_nebula_1.uniforms.uTime.value = t;
+  mat_nebula_2.uniforms.uTime.value = t;
+  paso_ps1.uniforms.uTime.value = t;
+
+  // rotacion sutil del blob
+  if(document.body.classList.contains('loaded')){
+    blobxd.rotation.z = Math.sin(t*0.15)*0.04;
+  }
+
+  // el polvo y estrellas rotan despacito
+  polvito.rotation.y = t*0.008;
+  polvito.rotation.x = Math.sin(t*0.05)*0.02;
+  estrellitas.rotation.y = t*0.003;
+   estrellitas.rotation.x = Math.sin(t*0.02)*0.005;
+
+  // sistema orbital (definido mas abajo en su propio bloque; los
+  // primeros frames de este loop corren ANTES de que exista y el
+  // typeof lo salta sin dramas)
+  if(typeof actualizar_sistema_orbital === 'function') actualizar_sistema_orbital(t);
+
+  compositor.render();
+
+  requestAnimationFrame(ciclo_render);
+}
+ciclo_render();
+
+
+// ===== RESIZE =====
+window.addEventListener('resize', () => {
+  camara.aspect = window.innerWidth/window.innerHeight;
+  camara.updateProjectionMatrix();
+  const m = medidas_render();
+  renderizador.setSize(m.ancho, m.alto, false);
+  compositor.setSize(m.ancho, m.alto);
+  paso_ps1.uniforms.uResolution.value.set(m.ancho, m.alto);
+  calcular_escala();
+  colocar_blob();
+  escalar_pantallas();
+
+  if(document.body.classList.contains('loaded')){
+    gsap.to(blobxd.scale,{
+      x:escala_objetivo, y:escala_objetivo, z:escala_objetivo,
+       duration:0.5, ease:"power2.out", overwrite:true
+    });
+  }
+});
+
+// ocultar cursor cuando sale de la ventana
+document.addEventListener('mouseleave', () => { el_cursor.style.opacity=0; el_puntito.style.opacity=0; });
+document.addEventListener('mouseenter', () => { el_cursor.style.opacity=1; el_puntito.style.opacity=1; });
+
+
+/*
+  ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ┃  ===== SISTEMA ORBITAL =====       ┃
+  ┃  "EL SISTEMA SOMA"                 ┃
+  ┃  las capturas de sitios orbitan el ┃
+  ┃  blob como planetas DENTRO de la   ┃
+  ┃  escena webgl → el shader ps1 las  ┃
+  ┃  pixelea gratis. cada orbita trae  ┃
+  ┃  su linea de trayectoria.          ┃
+  ┃  no toca blob / ps1 / intro / DOM  ┃
+  ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*/
+var actualizar_sistema_orbital; // var a proposito: hoistea y el typeof del loop lo ve
+(function(){
+  const orbital_reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // pool de capturas: hay MAS imagenes que satelites → cuando un
+  // satelite se oculta se teletransporta Y agarra una captura nueva
+  // del pool: el cielo nunca repite programacion
+  const POOL_SITIOS = [
+    'sitio-1.jpg','sitio-2.jpg','sitio-3.png','sitio-4.png',
+    'sitio-5.png','sitio-6.png','sitio-7.png','sitio-8.png',
+    'sitio-9.png','sitio-10.png','sitio-11.png','sitio-12.png',
+    'sitio-13.png','sitio-14.png'
+  ];
+  // barajita fisher-yates pa que cada visita arranque distinto
+  for(let i=POOL_SITIOS.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [POOL_SITIOS[i],POOL_SITIOS[j]] = [POOL_SITIOS[j],POOL_SITIOS[i]];
+  }
+  let puntero_pool = 0;
+  function siguiente_del_pool(){ return POOL_SITIOS[(puntero_pool++) % POOL_SITIOS.length]; }
+
+  const NUM_SITIOS = es_celular ? 3 : 6; // en cel menos trafico espacial
+  const cargador_orbital = new THREE.TextureLoader();
+  const v_tmp_orbital = new THREE.Vector3();
+  function azar(a,b){ return a + Math.random()*(b-a); }
+
+  // grupo HERMANO del blob, jamas hijo: blobxd rota con el mouse y
+  // colgarse de el marearia al sistema solar entero. solo se copia
+  // POSICION cada frame (resize-proof gratis), nunca rotacion
+  const grupo_orbital = new THREE.Object3D();
+  escena.add(grupo_orbital);
+
+  const geo_plano_orbital = new THREE.PlaneGeometry(1,1); // compartida
+  const satelites = [];
+
+  function crear_satelite(opciones){
+    const pivote = new THREE.Object3D();
+    // inclinacion propia, TODAS distintas: cada orbita es su propio plano
+    pivote.rotation.x = azar(-0.5, 0.55);
+    pivote.rotation.y = Math.random()*Math.PI*2;
+    grupo_orbital.add(pivote);
+
+    const mat = new THREE.MeshBasicMaterial({
+      transparent:true,
+      depthWrite:true, // INTENCIONAL: el z-buffer los esconde detras del blob
+      opacity:0,
+      side: opciones.doble ? THREE.DoubleSide : THREE.FrontSide
+    });
+    if(opciones.alfa) mat.alphaTest = 0.35; // pngs con alfa: sin halos contra las particulas additive
+    const mesh = new THREE.Mesh(geo_plano_orbital, mat);
+    mesh.visible = false;
+    pivote.add(mesh);
+
+    // linea de trayectoria: hija del MISMO pivote → hereda la inclinacion gratis
+    const mat_linea = new THREE.LineBasicMaterial({
+      color:0x5B82FF, transparent:true, opacity:0,
+      blending:THREE.AdditiveBlending, depthWrite:false
+    });
+    const linea = new THREE.LineLoop(new THREE.BufferGeometry(), mat_linea);
+    linea.visible = !opciones.sin_linea;
+    pivote.add(linea);
+
+    const sat = Object.assign({
+      pivote, mesh, mat, linea, mat_linea,
+      fase: Math.random()*Math.PI*2,
+      velocidad: azar(0.05,0.16) * (Math.random()<0.3 ? -1 : 1), // algunas retrogradas
+      alto: es_celular ? 0.72 : 1.05, // en cel mas chiquitos: el blob esta centrado y el titular manda
+      intro: {v: orbital_reducido ? 1 : 0}, // opacidad de entrada (la anima gsap)
+      vida: 1,          // opacidad del ciclo de vida (aparecer/desaparecer)
+      cerca: 1,         // freno de camara
+      estado: 'visible',
+      t_cambio: azar(14,34),
+      t0: 0, lista:false, fallida:false
+    }, opciones);
+    satelites.push(sat);
+    return sat;
+  }
+
+  // carga segura: un 404 esconde ESE satelite y la vida sigue
+  function poner_textura(sat, ruta){
+    sat.lista = false;
+    cargador_orbital.load(ruta, tex=>{
+      sat.mat.map = tex;
+      sat.mat.needsUpdate = true;
+      const asp = Math.min(1.9, Math.max(0.6, tex.image.width/tex.image.height));
+      sat.mesh.scale.set(sat.alto*asp, sat.alto, 1);
+      sat.lista = true; sat.fallida = false;
+    }, undefined, ()=>{ sat.fallida = true; sat.linea.visible = false; });
+  }
+
+  // --- los planetas: capturas de sitios ---
+  for(let i=0;i<NUM_SITIOS;i++){
+    poner_textura(crear_satelite({indice:i}), siguiente_del_pool());
+  }
+
+  // --- easter egg 1: el disco. un ps1 sin disco no arranca. orbita mas
+  // lejana, chiquito, girando en dos ejes por siempre ---
+  const disco_orbital = crear_satelite({indice:NUM_SITIOS, doble:true, alfa:true, alto:es_celular?0.48:0.62, es_disco:true});
+  disco_orbital.velocidad = 0.07;
+  poner_textura(disco_orbital, 'disco-retro.png');
+
+  // --- easter egg 2: dali cosmonauta. NO vive en el ciclo normal:
+  // cada 80-110s hace UNA pasada por la orbita cercana y se va.
+  // el que lo cache, gano ---
+  const dali_orbital = crear_satelite({indice:1, sin_linea:true, alfa:true, alto:es_celular?0.85:1.15, es_dali:true});
+  dali_orbital.vida = 0;
+  dali_orbital.estado = 'dormido';
+  dali_orbital.velocidad = 0.14;
+  dali_orbital.t_cambio = azar(25,50); // la primera pasada llega algo pronto, pa que exista
+  poner_textura(dali_orbital, 'dali-cosmonauta.png');
+
+  // --- radios EN FUNCION DE LA ESCALA, jamas fijos: si el blob crece
+  // (desktop ancho), el sistema solar crece con el. las orbitas 2a y 4a
+  // son "de pasada cercana": su semieje b se estira hacia la camara ---
+  function recalcular_orbitas(){
+    const base = RADIO_BLOB * escala_objetivo;
+    satelites.forEach(sat=>{
+      sat.a = base * (1.55 + sat.indice*0.35);
+      sat.b = (sat.indice===1 || sat.indice===3) ? Math.min(sat.a*1.5, 5.0) : sat.a;
+      const puntos = new THREE.EllipseCurve(0,0,sat.a,sat.b,0,Math.PI*2)
+        .getPoints(128).map(p=> new THREE.Vector3(p.x, 0, p.y));
+      sat.linea.geometry.dispose();
+      sat.linea.geometry = new THREE.BufferGeometry().setFromPoints(puntos);
+    });
+  }
+  recalcular_orbitas();
+  // listener PROPIO registrado despues del existente → corre despues
+  // de calcular_escala() sin tocar codigo ajeno
+  window.addEventListener('resize', recalcular_orbitas);
+
+  // reduced motion: cielo ESTATICO en angulos fijos bonitos, sin orbitar
+  if(orbital_reducido){
+    satelites.forEach((sat,i)=>{ sat.velocidad = 0; sat.fase = i*1.9 + 0.7; });
+  }
+
+  // --- ciclo de vida: visible → fade out 1.2s → oculto (teletransporte
+  // + captura NUEVA) → fade in 1.2s. duraciones aleatorias por satelite
+  // pa que nunca respiren juntos ---
+  function paso_vida(sat, t){
+    if(orbital_reducido || sat.es_disco){ sat.vida = 1; return; }
+    if(sat.es_dali){ paso_dali(sat, t); return; }
+    if(sat.estado === 'visible'){
+      sat.vida = 1;
+      if(t > sat.t_cambio){ sat.estado = 'saliendo'; sat.t0 = t; }
+    } else if(sat.estado === 'saliendo'){
+      sat.vida = Math.max(0, 1-(t-sat.t0)/1.2);
+      if(sat.vida === 0){
+        sat.estado = 'oculto';
+        sat.t_cambio = t + azar(6,14);
+        sat.fase = Math.random()*Math.PI*2;        // teletransporte
+        poner_textura(sat, siguiente_del_pool());  // programacion nueva
+      }
+    } else if(sat.estado === 'oculto'){
+      sat.vida = 0;
+      if(t > sat.t_cambio){ sat.estado = 'entrando'; sat.t0 = t; }
+    } else {
+      sat.vida = Math.min(1, (t-sat.t0)/1.2);
+      if(sat.vida === 1){ sat.estado = 'visible'; sat.t_cambio = t + azar(14,26); }
+    }
+  }
+
+  function paso_dali(sat, t){
+    if(sat.estado === 'dormido'){
+      sat.vida = 0;
+      if(t > sat.t_cambio){
+        sat.estado = 'pasando';
+        sat.t0 = t;
+        sat.dur = Math.PI/Math.abs(sat.velocidad); // media vuelta y adios
+        sat.fase = Math.random()*Math.PI*2 - t*sat.velocidad;
+      }
+    } else {
+      const p = (t-sat.t0)/sat.dur;
+      if(p >= 1){ sat.estado = 'dormido'; sat.vida = 0; sat.t_cambio = t + azar(80,110); return; }
+      sat.vida = Math.max(0, Math.min(1, Math.min(p, 1-p)/0.1)); // rampa entra/sale
+    }
+  }
+
+  // entrada post-intro: nacen en 0 y suben escalonados cuando body.loaded
+  let entrada_orbital_iniciada = orbital_reducido;
+  function arrancar_entrada(){
+    entrada_orbital_iniciada = true;
+    satelites.forEach((sat,i)=>{
+      gsap.to(sat.intro, {v:1, duration:1.2, delay:1 + i*0.3, ease:'power2.out'});
+    });
+  }
+
+  actualizar_sistema_orbital = function(t){
+    // seguir al blob: SOLO posicion (la rotacion del mouse no nos toca)
+    grupo_orbital.position.copy(blobxd.position);
+
+    if(!entrada_orbital_iniciada && document.body.classList.contains('loaded')) arrancar_entrada();
+
+    const tt = orbital_reducido ? 0 : t; // reduced motion = cielo congelado
+
+    satelites.forEach(sat=>{
+      if(sat.fallida) return;
+      paso_vida(sat, t);
+
+      const ang = sat.fase + tt*sat.velocidad;
+      sat.mesh.position.set(sat.a*Math.cos(ang), 0, sat.b*Math.sin(ang));
+
+      if(sat.es_disco){
+        // el disco NO hace billboard: gira como disco, ese es el chiste
+        sat.mesh.rotation.set(tt*0.8 + 0.4, tt*1.25, 0);
+      } else {
+        sat.mesh.lookAt(camara.position);           // billboard
+        sat.mesh.rotateZ(Math.sin(tt*0.3 + sat.fase)*0.12); // tumbleo DESPUES del lookAt, no acumulado
+      }
+
+      // freno de camara: una captura gigante tapando el titular NO es cine
+      sat.mesh.getWorldPosition(v_tmp_orbital);
+      const d = v_tmp_orbital.distanceTo(camara.position);
+      sat.cerca = Math.min(1, Math.max(0, (d-1.2)/1.2));
+
+      // en cel el blob va CENTRADO: un satelite cruzando por el frente se
+      // estaciona ENCIMA del titular. en cel no hay pasadas cinematograficas:
+      // el que cruza al frente se desvanece y reaparece por el lado
+      let frontal = 1;
+      if(es_celular){
+        frontal = 1 - Math.min(1, Math.max(0, (v_tmp_orbital.z - 0.8)/1.4));
+      }
+
+      const opacidad = sat.intro.v * sat.vida * sat.cerca * frontal;
+      sat.mat.opacity = opacidad;
+      // visible=false cuando esta apagado: un plano invisible que escribe
+      // depth taparia particulas detras — ese bug NO nace hoy
+      sat.mesh.visible = sat.lista && opacidad > 0.01;
+      sat.mat_linea.opacity = 0.16 * sat.intro.v;
+    });
+  };
+})();
+} // Fin del bloque histórico inactivo.
+
+
+/*
+  ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ┃  MENU HAMBURGUESA                  ┃
+  ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*/
+// ===== RUINAS DEL MUSEO: entrada de la excavacion (una sola vez) =====
+const seccion_museo = document.getElementById('servicios');
+const observador_museo = new IntersectionObserver((entradas)=>{
+  if(entradas[0].isIntersecting){
+    seccion_museo.classList.add('museo_visible');
+    observador_museo.unobserve(seccion_museo);
+  }
+},{threshold:0.2});
+observador_museo.observe(seccion_museo);
+
+/* ===== EL VUELO DE LOS LENTES + PARALLAX DEL CAMPO =====
+   scroll-scrub: cero frames generados, UN png interpolado por
+   matematica. el REPOSO css de .lentes_ruinas ya es "puestos en la
+   cara" -> el vuelo es puro transform que tiende a la identidad.
+   division de poderes (cero pelea de transforms):
+   - wrapper .capa_pasto  -> parallax (este js)
+   - tela   .pasto_tela   -> viento   (css)
+   - lentes .lentes_ruinas-> vuelo    (este js) + pop por filter (css) */
+(function(){
+  const ruinas = document.getElementById('ruinasMuseo');
+  const lentes = document.getElementById('lentesRuinas');
+  const pata = document.getElementById('pataRuinas');
+  if(!ruinas || !lentes || !pata) return;
+  // reduced-motion: los lentes ya estan puestos (reposo css), fin
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const capas = Array.from(ruinas.querySelectorAll('.capa_pasto'));
+  let p_actual = 0, p_meta = 0, animando = false, puestos = false;
+
+  function medir(){
+    const r = ruinas.getBoundingClientRect();
+    const vh = window.innerHeight;
+    // fuera de vista: ni molestar
+    if(r.top > vh*1.4 || r.bottom < -vh*0.4) { p_meta = r.bottom < 0 ? 1 : 0; }
+    else {
+      // MISMO reloj en cel y pc: p=0 justo cuando la franja asoma
+      // por abajo, p=1 cuando su borde inferior sube al ~88% del
+      // viewport. amarrado a la GEOMETRIA de la franja (antes iba
+      // a fraccion del viewport y en cel arrancaba a media seccion)
+      p_meta = Math.min(1, Math.max(0, (vh - r.top) / (r.height + vh*0.12)));
+    }
+
+    // parallax con freno ASIMETRICO: bajando (entrada) viaja libre,
+    // pero SUBIENDO casi ni se mueve (k*45 → la capa cerca sube max
+    // ~10px) — el tope simetrico de 170 seguía dejando al pasto
+    // asomarse por encima de la columna al scrollear de mas
+    const desvio = (r.top + r.height*0.5) - vh*0.5;
+    capas.forEach(c=>{
+      const k = parseFloat(c.dataset.parallax);
+      const off = Math.max(-k*45, Math.min(k*170, desvio*k));
+      c.style.transform = 'translateY(' + off.toFixed(1) + 'px)';
+    });
+
+    if(!animando){ animando = true; requestAnimationFrame(aplicar); }
+  }
+
+  function aplicar(){
+    p_actual += (p_meta - p_actual) * 0.14;
+    if(Math.abs(p_meta - p_actual) < 0.002) p_actual = p_meta;
+
+    // q^2: el vuelo DESACELERA al llegar (aterrizaje suave, no choque)
+    const q = 1 - p_actual;
+    const e = q*q;
+    // EL TRAZO ORIGINAL: barrido grande arriba-izquierda → busto
+    // (valores v1). SIN fade: el objeto existe SIEMPRE — el
+    // fake-3d es la escala 2.6 achicandose mientras "se aleja"
+    // hacia la cara (cerca=grande, lejos=chico, fisica de a peso).
+    // destino 0°: el wrapper aterriza plano y las imgs no traen
+    // rotacion propia → el swap de pngs no puede brincar de angulo
+    const tx  = (-e * window.innerWidth  * 0.55).toFixed(1);
+    const ty  = (-e * window.innerHeight * 0.50).toFixed(1);
+    const rot = (-e * 38).toFixed(2);
+    const esc = (1 + e * 2.6).toFixed(3);
+    // EL MISMO transform a las DOS capas del sandwich: frente y
+    // pata vuelan como un solo objeto rigido (mismo canvas de
+    // origen = alineados por construccion)
+    const t = 'translate('+tx+'px,'+ty+'px) rotate('+rot+'deg) scale('+esc+')';
+    lentes.style.transform = t;
+    pata.style.transform = t;
+
+    // el CLICK de ponerse: brillo fosforo una sola vez por aterrizaje
+    if(!puestos && p_actual > 0.985){ puestos = true; lentes.classList.add('puestos'); }
+    else if(puestos && p_actual < 0.9){ puestos = false; lentes.classList.remove('puestos'); }
+
+    if(p_actual !== p_meta){ requestAnimationFrame(aplicar); }
+    else { animando = false; }
+  }
+
+  window.addEventListener('scroll', medir, {passive:true});
+  window.addEventListener('resize', medir);
+  medir();
+})();
+
+const boton_menu = document.getElementById('botonMenu');
+const overlay_menu = document.getElementById('overlayMenu');
+
+function alternar_menu(forzar){
+  const abrir = (typeof forzar === 'boolean') ? forzar : !overlay_menu.classList.contains('abierto');
+  overlay_menu.classList.toggle('abierto', abrir);
+  boton_menu.classList.toggle('activo', abrir);
+  boton_menu.setAttribute('aria-expanded', abrir);
+  boton_menu.setAttribute('aria-label', abrir ? 'Cerrar menú' : 'Abrir menú');
+  document.body.style.overflow = abrir ? 'hidden' : '';
+}
+boton_menu.addEventListener('click', () => alternar_menu());
+overlay_menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => alternar_menu(false)));
+document.addEventListener('keydown', e => { if(e.key === 'Escape') alternar_menu(false); });
+
+
+/*
+  ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ┃  PORTAFOLIO — sitios en vivo       ┃
+  ┃  iframe real escalado dentro de    ┃
+  ┃  un marco de navegador / celular   ┃
+  ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*/
+const MEDIDAS_DISPOSITIVO = {
+  pc:    { w: 1440, h: 900 },
+  movil: { w: 390,  h: 844 }
+};
+
+// el iframe se renderiza al tamaño REAL del dispositivo y se escala con
+// transform: asi los media queries del sitio embebido responden solitos
+function escalar_pantallas(){
+  document.querySelectorAll('.proyecto').forEach(proy => {
+    const modo = proy.dataset.modo || 'pc';
+    const base = MEDIDAS_DISPOSITIVO[modo];
+    const pantalla = proy.querySelector('.pantalla_marco');
+    const iframe = proy.querySelector('iframe');
+    if(!pantalla || !iframe) return;
+    iframe.style.width = base.w + 'px';
+    iframe.style.height = base.h + 'px';
+    iframe.style.transform = 'scale(' + (pantalla.clientWidth / base.w) + ')';
+  });
+}
+
+// Las demos se montan por intención al abrir su details.
+// recorrido-motion.js gestiona carga, timeout y alternativa externa.
+// Las capturas reales son la portada; ningún iframe captura el scroll de lectura.
+
+// toggle pc/movil por proyecto
+document.querySelectorAll('.proyecto').forEach(proy => {
+  proy.querySelectorAll('[data-modo-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      proy.dataset.modo = btn.dataset.modoBtn;
+      proy.querySelectorAll('[data-modo-btn]').forEach(b => b.classList.toggle('activa', b === btn));
+      requestAnimationFrame(escalar_pantallas);
+    });
+  });
+});
+
+window.addEventListener('resize', escalar_pantallas);
+escalar_pantallas();
+
+
+/*
+  ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ┃  BOTONES LIQUIDOS — interaccion     ┃
+  ┃  glow sigue al cursor + ripple      ┃
+  ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*/
+document.querySelectorAll('.botonxd').forEach(btn => {
+  btn.addEventListener('pointermove', e => {
+    const r = btn.getBoundingClientRect();
+    btn.style.setProperty('--bx-mx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+    btn.style.setProperty('--bx-my', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+  });
+  btn.addEventListener('click', e => {
+    const r = btn.getBoundingClientRect();
+    const onda = document.createElement('span');
+    onda.className = 'onda_boton';
+    const tam = Math.max(r.width, r.height) * 1.2;
+    onda.style.width = onda.style.height = tam + 'px';
+    onda.style.left = (e.clientX - r.left) + 'px';
+    onda.style.top = (e.clientY - r.top) + 'px';
+    btn.appendChild(onda);
+    gsap.fromTo(onda, {scale:0, opacity:.9}, {
+      scale:2.6, opacity:0, duration:.7, ease:'power2.out',
+      onComplete: () => onda.remove()
+    });
+  });
+});
+
+
+/*
+  ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ┃  STICKER SLOTS — entrada "pegar"    ┃
+  ┃  IO + stagger 80ms entre slots      ┃
+  ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*/
+(function(){
+  const slots = Array.from(document.querySelectorAll('.sticker-slot'));
+  const fila = document.querySelector('.fila_botones');
+  if(!slots.length || !fila) return;
+
+  let ya_pegado = false;
+  const pegar = () => {
+    if(ya_pegado) return;
+    ya_pegado = true;
+    slots.forEach((s, i) => setTimeout(() => {
+      s.classList.add('pegado');
+      // el icono flotante entra JUNTO con su sticker (misma animacion,
+      // mismo instante — es parte de la misma pieza pegada)
+      const envoltura = s.closest('.envoltura_botonxd');
+      const icono = envoltura && envoltura.querySelector('.icono_flotante_xd');
+      if(icono) icono.classList.add('pegado');
+    }, i * 80));
+  };
+
+  // fallback duro: si el IO no dispara (navegadores/entornos raros),
+  // los stickers entran solos — ya_pegado evita el doble disparo
+  setTimeout(pegar, 6000);
+  if(!('IntersectionObserver' in window)){ pegar(); return; }
+
+  const io = new IntersectionObserver((ents, obs) => {
+    ents.forEach(ent => {
+      if(!ent.isIntersecting) return;
+      obs.disconnect();
+      // el hero se revela con gsap (.ya_se_ve): si el stagger corre
+      // detras de un contenedor invisible no se ve — esperamos tantito
+      const hero = document.getElementById('contenidoHero');
+      if(hero && !hero.classList.contains('ya_se_ve')){
+        let intentos = 0;
+        const esperar = setInterval(() => {
+          intentos++;
+          if(hero.classList.contains('ya_se_ve') || intentos > 50){
+            clearInterval(esperar);
+            pegar();
+          }
+        }, 120);
+      } else {
+        pegar();
+      }
+    });
+  }, { threshold: .2 });
+
+  io.observe(fila);
+})();
+
+
+/*
+  ╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
+  ┃  PULL-QUOTE DEL HERO — entrada       ┃
+  ┃  IO threshold .4 + stagger 130ms;    ┃
+  ┃  marks y garabato se encadenan por   ┃
+  ┃  css (delays .4s / .9s tras .entro)  ┃
+  ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*/
+(function(){
+  const cita = document.getElementById('citaHero');
+  if(!cita) return;
+  const lineas = Array.from(cita.querySelectorAll('.linea_cita'));
+
+  let ya_entro = false;
+  const entrar = () => {
+    if(ya_entro) return;
+    ya_entro = true;
+    lineas.forEach((l, i) => setTimeout(() => l.classList.add('entro'), i * 130));
+  };
+
+  // fallback duro: si el IO no dispara, la cita entra sola
+  setTimeout(entrar, 6000);
+  if(!('IntersectionObserver' in window)){ entrar(); return; }
+
+  const io = new IntersectionObserver((ents, obs) => {
+    ents.forEach(ent => {
+      if(!ent.isIntersecting) return;
+      obs.disconnect();
+      // mismo truco que los stickers: si el hero sigue oculto por el
+      // reveal de gsap, esperamos a .ya_se_ve pa que la entrada SE VEA
+      const hero = document.getElementById('contenidoHero');
+      if(hero && !hero.classList.contains('ya_se_ve')){
+        let intentos = 0;
+        const esperar = setInterval(() => {
+          intentos++;
+          if(hero.classList.contains('ya_se_ve') || intentos > 50){
+            clearInterval(esperar);
+            entrar();
+          }
+        }, 120);
+      } else {
+        entrar();
+      }
+    });
+  }, { threshold: .4 });
+
+  io.observe(cita);
+})();
+</script>
+</body>
+</html>
